@@ -537,7 +537,13 @@ func (lexer *Lexer) lexOperator() Token {
 		return Token{PrimaryType: BitwiseOperator, SecondaryType: ExclusiveOr, Buff: nil}
 	case '.':
 		lexer.eatLastByte()
-		return Token{PrimaryType: SpecialOperator, SecondaryType: Dot, Buff: nil}
+		switch next, _ := lexer.peek(); next {
+		case '.':
+			lexer.eatLastByte()
+			return Token{PrimaryType: SpecialOperator, SecondaryType: DotDot, Buff: nil}
+		default:
+			return Token{PrimaryType: SpecialOperator, SecondaryType: Dot, Buff: nil}
+		}
 	case ':':
 		lexer.eatLastByte()
 		return Token{PrimaryType: SpecialOperator, SecondaryType: Colon, Buff: nil}
@@ -571,6 +577,9 @@ func (lexer *Lexer) lexDelimiter() Token {
 	case ';':
 		lexer.eatLastByte()
 		return Token{PrimaryType: SemiColon, SecondaryType: SecondaryNullType, Buff: nil}
+	case ',':
+		lexer.eatLastByte()
+		return Token{PrimaryType: Comma, SecondaryType: SecondaryNullType, Buff: nil}
 	}
 
 	return Token{PrimaryType: ErrorToken, SecondaryType: NotFound, Buff: nil}

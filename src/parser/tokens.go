@@ -12,7 +12,8 @@ type SecondaryTokenType byte
 const (
 	PrimaryNullType PrimaryTokenType = 0
 
-	Identifier    PrimaryTokenType = 1
+	Identifier PrimaryTokenType = 1
+
 	NumberLiteral PrimaryTokenType = 2
 	StringLitral  PrimaryTokenType = 3
 	CharLiteral   PrimaryTokenType = 4
@@ -27,6 +28,7 @@ const (
 	LeftCurlyBrace  PrimaryTokenType = 12
 	RightCurlyBrace PrimaryTokenType = 13
 	SemiColon       PrimaryTokenType = 14
+	Comma           PrimaryTokenType = 15
 
 	// Operators
 	AirthmaticOperator PrimaryTokenType = 51
@@ -43,9 +45,13 @@ const (
 	ElseKeyword     PrimaryTokenType = 104
 	FunctionKeyword PrimaryTokenType = 105
 	StructKeyword   PrimaryTokenType = 106
-	EnumKeyword     PrimaryTokenType = 107
-	CaseKeyword     PrimaryTokenType = 208
-
+	TupleKeyword    PrimaryTokenType = 107
+	EnumKeyword     PrimaryTokenType = 108
+	CaseKeyword     PrimaryTokenType = 109
+	AsyncKeyword    PrimaryTokenType = 110
+	WorkKeyword     PrimaryTokenType = 111
+	InlineKeyword   PrimaryTokenType = 112
+	ImportKeyword   PrimaryTokenType = 113
 	// the parser stops parsing when it receives either of these types and shows the correct error message
 	EOF        PrimaryTokenType = 254
 	ErrorToken PrimaryTokenType = 255
@@ -103,6 +109,7 @@ const (
 	Colon    SecondaryTokenType = 61
 	QuesMark SecondaryTokenType = 62
 	Dot      SecondaryTokenType = 63
+	DotDot   SecondaryTokenType = 65
 
 	// Encoding for char literals
 	Byte1Char SecondaryTokenType = 71
@@ -125,6 +132,10 @@ var Keywords = map[string]PrimaryTokenType{
 	"case":   CaseKeyword,
 	"enum":   EnumKeyword,
 	"struct": StructKeyword,
+	"async":  AsyncKeyword,
+	"work":   WorkKeyword,
+	"inline": InlineKeyword,
+	"import": ImportKeyword,
 	// more stuff
 }
 
@@ -147,7 +158,8 @@ type Token struct {
 var PrimaryTypes map[PrimaryTokenType]string = map[PrimaryTokenType]string{
 	PrimaryNullType: "Null",
 
-	Identifier:    "Identifier",
+	Identifier: "Identifier",
+
 	NumberLiteral: "NumberLiteral",
 	StringLitral:  "StringLitral",
 	CharLiteral:   "CharLiteral",
@@ -161,8 +173,8 @@ var PrimaryTypes map[PrimaryTokenType]string = map[PrimaryTokenType]string{
 	RightBrace:      "RightBrace",
 	LeftCurlyBrace:  "LeftCurlyBrace",
 	RightCurlyBrace: "RightCurlyBrace",
-
-	SemiColon: "SemiColon",
+	SemiColon:       "SemiColon",
+	Comma:           "Comma",
 
 	AirthmaticOperator: "AirthmaticOperator",
 	AssignmentOperator: "AssignmentOperator",
@@ -177,8 +189,13 @@ var PrimaryTypes map[PrimaryTokenType]string = map[PrimaryTokenType]string{
 	ElseKeyword:     "ElseKeyword",
 	FunctionKeyword: "FunctionKeyword",
 	StructKeyword:   "StructKeyword",
+	TupleKeyword:    "TupleKeyword",
 	EnumKeyword:     "EnumKeyword",
 	CaseKeyword:     "CaseKeyword",
+	AsyncKeyword:    "AsyncKeyword",
+	WorkKeyword:     "WorkKeyword",
+	InlineKeyword:   "InlineKeyword",
+	ImportKeyword:   "ImportKeyowrd",
 
 	EOF:        "EOF",
 	ErrorToken: "ErrorToken",
@@ -229,6 +246,7 @@ var SecondaryTypes map[SecondaryTokenType]string = map[SecondaryTokenType]string
 	Colon:    "Colon",
 	QuesMark: "QuesMark",
 	Dot:      "Dot",
+	DotDot:   "DotDot",
 
 	Byte1Char: "Byte1Char",
 	Byte2Char: "Byte2Char",
