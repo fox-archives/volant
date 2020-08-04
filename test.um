@@ -1,0 +1,5 @@
+
+main: func() int = func() int { 
+    printf("heheheh\n");
+    return 0;
+};

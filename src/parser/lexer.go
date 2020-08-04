@@ -301,7 +301,7 @@ func (lexer *Lexer) lexChar() Token {
 }
 
 func (lexer *Lexer) lexString() Token {
-	str := []byte{}
+	str := []byte{'"'}
 
 	line := lexer.Line
 	column := lexer.Column
@@ -316,10 +316,10 @@ func (lexer *Lexer) lexString() Token {
 			return Token{PrimaryType: ErrorToken, SecondaryType: UnexpectedEOF, Buff: nil, Line: lexer.Line, Column: lexer.Column}
 		}
 
-		switch character {
-		case '\\':
-			lexer.eatLastByte() // eat '\\'
+		str = append(str, character)
+		lexer.eatLastByte()
 
+		if character == '\\' {
 			next, ok := lexer.peek()
 
 			if !ok {
@@ -330,76 +330,15 @@ func (lexer *Lexer) lexString() Token {
 				return Token{PrimaryType: ErrorToken, SecondaryType: UnexpectedEOF, Buff: nil, Line: lexer.Line, Column: lexer.Column}
 			}
 
-			switch next {
-			case 't':
-				str = append(str, '\t')
-				lexer.eatLastByte()
-			case 'n':
-				str = append(str, '\n')
-				lexer.eatLastByte()
-			case 'r':
-				str = append(str, '\r')
-				lexer.eatLastByte()
-			case '\'':
-				str = append(str, '\'')
-				lexer.eatLastByte()
-			case '\\':
-				str = append(str, '\\')
-				lexer.eatLastByte()
-			case 'u': // 2 byte char
-				lexer.eatLastByte()
-				chr := []byte{}
-				chr = append(append(append(append(chr, 0), 0), 0), 0)
-
-				for i := 0; i < 4; i++ {
-					chr2, ok := lexer.peek()
-
-					if !ok { // Error: Expected escape sequence, got eof
-						return Token{PrimaryType: ErrorToken, SecondaryType: UnexpectedEOF, Buff: nil, Line: lexer.Line, Column: lexer.Column}
-					} else if IsNumHex(chr2) {
-						chr[i] = chr2
-						lexer.eatLastByte()
-					} else { // Error: Invalid character in escape sequence, expected (0-9|A-F|a-f)
-						return Token{PrimaryType: ErrorToken, SecondaryType: SecondaryNullType, Buff: nil, Line: lexer.Line, Column: lexer.Column}
-					}
-				}
-
-				num, _ := strconv.ParseInt(string(chr), 16, 32)
-				str = append(str, []byte(string(rune(num)))...)
-
-			case 'U': // 4 byte char
-				lexer.eatLastByte()
-				chr := []byte{}
-				chr = append(append(append(append(chr, 0), 0), 0), 0)
-
-				for i := 0; i < 8; i++ {
-					chr2, ok := lexer.peek()
-
-					if !ok { // Error: Expected escape sequence, got eof
-						return Token{PrimaryType: ErrorToken, SecondaryType: UnexpectedEOF, Buff: nil, Line: lexer.Line, Column: lexer.Column}
-					} else if IsNumHex(chr2) {
-						chr[i] = chr2
-						lexer.eatLastByte()
-					} else { // Error: Invalid character in escape sequence, expected (0-9|A-F|a-f)
-						return Token{PrimaryType: ErrorToken, SecondaryType: SecondaryNullType, Buff: nil, Line: lexer.Line, Column: lexer.Column}
-					}
-				}
-
-				num, _ := strconv.ParseInt(string(chr), 16, 32)
-				str = append(str, []byte(string(rune(num)))...)
-			default:
-				// idk we can prob throw an error here saying that its an invalid escape sequence?
-				str = append(str, next)
-				lexer.eatLastByte()
-			}
-		default:
-			str = append(str, character)
+			str = append(str, next)
+			character = next
 			lexer.eatLastByte()
 		}
 	}
 
 	lexer.eatLastByte() // eat '"'
-	return Token{PrimaryType: StringLitral, SecondaryType: SecondaryNullType, Buff: str, Line: line, Column: column}
+	str = append(str, '"')
+	return Token{PrimaryType: StringLiteral, SecondaryType: SecondaryNullType, Buff: str, Line: line, Column: column}
 }
 
 func (lexer *Lexer) lexWord() Token {

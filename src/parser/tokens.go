@@ -15,7 +15,7 @@ const (
 	Identifier PrimaryTokenType = 1
 
 	NumberLiteral PrimaryTokenType = 2
-	StringLitral  PrimaryTokenType = 3
+	StringLiteral PrimaryTokenType = 3
 	CharLiteral   PrimaryTokenType = 4
 
 	StringDelimiter PrimaryTokenType = 6
@@ -52,6 +52,9 @@ const (
 	WorkKeyword     PrimaryTokenType = 111
 	InlineKeyword   PrimaryTokenType = 112
 	ImportKeyword   PrimaryTokenType = 113
+	DeferKeyword    PrimaryTokenType = 114
+	ReturnKeyword   PrimaryTokenType = 115
+
 	// the parser stops parsing when it receives either of these types and shows the correct error message
 	EOF        PrimaryTokenType = 254
 	ErrorToken PrimaryTokenType = 255
@@ -136,6 +139,9 @@ var Keywords = map[string]PrimaryTokenType{
 	"work":   WorkKeyword,
 	"inline": InlineKeyword,
 	"import": ImportKeyword,
+	"defer":  DeferKeyword,
+	"func":   FunctionKeyword,
+	"return": ReturnKeyword,
 	// more stuff
 }
 
@@ -161,7 +167,7 @@ var PrimaryTypes map[PrimaryTokenType]string = map[PrimaryTokenType]string{
 	Identifier: "Identifier",
 
 	NumberLiteral: "NumberLiteral",
-	StringLitral:  "StringLitral",
+	StringLiteral: "StringLiteral",
 	CharLiteral:   "CharLiteral",
 
 	StringDelimiter: "StringDelimiter",

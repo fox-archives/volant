@@ -2,24 +2,15 @@ package parser
 
 type FunctionType byte
 
+// Never change these numbers, they are very sepcific
 const (
-	OrdFunction    FunctionType = 1
-	AsyncFunction  FunctionType = 2
-	WorkFunction   FunctionType = 4
-	InlineFunction FunctionType = 8
-)
-
-type StatementType byte
-
-const (
-	ImportStatement        StatementType = 2
-	StructTypedefStatement StatementType = 3
-	EnumTypedefStatement   StatementType = 4
-	TupleTypedefStatement  StatementType = 5
-
-	DeclarationStatement StatementType = 6
-	AssignmentStatement  StatementType = 7
-	ExpressionStatement  StatementType = 8
+	OrdFunction         FunctionType = 1
+	AsyncFunction       FunctionType = 2
+	WorkFunction        FunctionType = 4
+	InlineFunction      FunctionType = 8
+	InlineOrdFunction   FunctionType = 9
+	InlineAsyncFunction FunctionType = 10
+	InlineWorkFunction  FunctionType = 12
 )
 
 type LoopType byte
@@ -31,10 +22,28 @@ const (
 	NoneLoop     LoopType = 4
 )
 
-type DeclarationStruct struct {
-	Identifiers []Token
-	Types       []TypeStruct
-	Values      []ExpressionStruct
+type BasicType byte
+
+const (
+	U8Type  BasicType = 1
+	U16Type BasicType = 2
+	U32Type BasicType = 3
+	U64Type BasicType = 4
+	I8Type  BasicType = 5
+	I16Type BasicType = 6
+	I32Type BasicType = 7
+	I64Type BasicType = 8
+)
+
+var BasicTypeDebug = map[BasicType]string{
+	U8Type:  "U8Type",
+	U16Type: "U16Type",
+	U32Type: "U32Type",
+	U64Type: "U64Type",
+	I8Type:  "I8Type",
+	I16Type: "I16Type",
+	I32Type: "I32Type",
+	I64Type: "I64Type",
 }
 
 type TypeType byte
@@ -52,29 +61,14 @@ type TypeStruct struct {
 
 	Identifier Token
 	FuncType   FunctionTypeStruct
-	StructType StructTypeStruct
-	TupleType  TupleTypeStruct
-}
-
-type TupleTypeStruct struct {
-	Identifier Token
-	Types      []TypeStruct
-}
-
-type StructTypeStruct struct {
-	Identifier Token
-	Props      []StructPropStruct
+	StructType Struct
+	TupleType  Tuple
 }
 
 type StructPropStruct struct {
 	Identifier Token
 	Type       TypeStruct
-	Value      ExpressionStruct
-}
-
-type EnumTypeStruct struct {
-	Identifier  Token
-	Identifiers []Token
+	Value      Expression
 }
 
 type FunctionTypeStruct struct {
@@ -83,58 +77,156 @@ type FunctionTypeStruct struct {
 	ReturnTypes []TypeStruct
 }
 
-type FunctionExpressionStruct struct {
-	Type        FunctionType
-	Args        []ArgStruct
-	ReturnTypes []TypeStruct
-	Block       BlockStruct
-}
-
 type ArgStruct struct {
 	Identifier Token
 	Type       TypeStruct
 }
 
-type BlockStruct struct {
-	Statements []StatementStruct
-}
-
-type StatementStruct struct {
-	Type StatementType
-
-	Expression  ExpressionStruct
-	Declaration DeclarationStruct
-	Funct       FunctionTypeStruct
-	Strct       StructTypeStruct
-	Enum        EnumTypeStruct
-	Tupl        TupleTypeStruct
-}
-
-type LoopStruct struct {
-	Type          LoopType
-	InitStatement StatementStruct
-	Condition     ExpressionStruct
-	LoopStatement StatementStruct
-	Block         BlockStruct
-}
-
-type ExpressionStruct struct {
-	expr_left  *ExpressionStruct
-	op         Token
-	expr_right *ExpressionStruct
-}
-
-type IfElseBlockStruct struct {
-	InitStatement StatementStruct
-	Conditions    []ExpressionStruct
-	Blocks        []BlockStruct
-	ElseBlock     BlockStruct
-}
-
 type SwitchType byte
 
-type SwitchStruct struct {
-	InitStatement StatementStruct
-	Expression    ExpressionStruct
-	Cases         []ExpressionStruct
+type CaseStruct struct {
+	Condition  Expression
+	Statements []Statement
 }
+
+type Statement interface {
+	isStatement()
+}
+
+type Expression interface {
+	isExpression()
+	isStatement()
+}
+
+type (
+	Block struct {
+		Statements []Statement
+	}
+	Declaration struct {
+		Identifiers []Token
+		Types       []TypeStruct
+		Values      []Expression
+	}
+	Import struct {
+		Paths []Token
+	}
+	Loop struct {
+		Type          LoopType
+		InitStatement Statement
+		Condition     Expression
+		LoopStatement Statement
+		Block         Block
+	}
+	Switch struct {
+		InitStatement Statement
+		Expression    Expression
+		Cases         []CaseStruct
+	}
+	IfElseBlock struct {
+		InitStatement Statement
+		Conditions    []Expression
+		Blocks        []Block
+		ElseBlock     Block
+	}
+	Return struct {
+		Values []Expression
+	}
+	Assignment struct {
+		Variable Expression
+		Op       Token
+		Value    Expression
+	}
+	Enum struct {
+		Name        Token
+		Identifiers []Token
+		Values      []Expression
+	}
+	Tuple struct {
+		Identifier Token
+		Types      []TypeStruct
+	}
+	Struct struct {
+		Identifier Token
+		Props      []StructPropStruct
+	}
+)
+
+type (
+	BasicLit struct {
+		Typ   BasicType
+		Value Token
+	}
+
+	IdentExpr struct {
+		Name Token
+	}
+
+	BinaryExpr struct {
+		Left  Expression
+		Op    Token
+		Right Expression
+	}
+
+	UnaryExpr struct {
+		Op   Token
+		Expr Expression
+	}
+
+	ArrExpr struct {
+		Expr []Expression
+	}
+
+	CallExpr struct {
+		Func []byte
+		Type FunctionType
+		Args []Expression
+	}
+
+	ParenExpr struct {
+		Expr Expression
+	}
+
+	FunctionExpression struct {
+		Type        FunctionType
+		Args        []ArgStruct
+		ReturnTypes []TypeStruct
+		Block       Block
+	}
+
+	FunctionCall struct {
+		Name Token
+		Args []Expression
+	}
+)
+
+func (Block) isStatement()       {}
+func (Declaration) isStatement() {}
+func (Import) isStatement()      {}
+func (Loop) isStatement()        {}
+func (Switch) isStatement()      {}
+func (IfElseBlock) isStatement() {}
+func (Return) isStatement()      {}
+func (Assignment) isStatement()  {}
+func (Enum) isStatement()        {}
+func (Tuple) isStatement()       {}
+func (Struct) isStatement()      {}
+
+func (BasicLit) isExpression()           {}
+func (IdentExpr) isExpression()          {}
+func (BinaryExpr) isExpression()         {}
+func (UnaryExpr) isExpression()          {}
+func (ArrExpr) isExpression()            {}
+func (CallExpr) isExpression()           {}
+func (ParenExpr) isExpression()          {}
+func (FunctionCall) isExpression()       {}
+func (FunctionExpression) isExpression() {}
+
+func (BasicLit) isStatement()           {}
+func (IdentExpr) isStatement()          {}
+func (BinaryExpr) isStatement()         {}
+func (UnaryExpr) isStatement()          {}
+func (ArrExpr) isStatement()            {}
+func (CallExpr) isStatement()           {}
+func (ParenExpr) isStatement()          {}
+func (FunctionCall) isStatement()       {}
+func (FunctionExpression) isStatement() {}
