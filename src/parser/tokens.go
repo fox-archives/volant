@@ -55,6 +55,8 @@ const (
 	DeferKeyword    PrimaryTokenType = 114
 	ReturnKeyword   PrimaryTokenType = 115
 	DefaultKeyword  PrimaryTokenType = 116
+	BreakKeyword    PrimaryTokenType = 117
+	ContinueKeyword PrimaryTokenType = 118
 
 	// the parser stops parsing when it receives either of these types and shows the correct error message
 	EOF        PrimaryTokenType = 254
@@ -129,21 +131,23 @@ const (
 
 // Keywords urgh idk what to write
 var Keywords = map[string]PrimaryTokenType{
-	"if":      IfKeyword,
-	"else":    ElseKeyword,
-	"for":     ForKeyword,
-	"switch":  SwitchKeyword,
-	"case":    CaseKeyword,
-	"enum":    EnumKeyword,
-	"struct":  StructKeyword,
-	"async":   AsyncKeyword,
-	"work":    WorkKeyword,
-	"inline":  InlineKeyword,
-	"import":  ImportKeyword,
-	"defer":   DeferKeyword,
-	"func":    FunctionKeyword,
-	"return":  ReturnKeyword,
-	"default": DefaultKeyword,
+	"if":       IfKeyword,
+	"else":     ElseKeyword,
+	"for":      ForKeyword,
+	"switch":   SwitchKeyword,
+	"case":     CaseKeyword,
+	"enum":     EnumKeyword,
+	"struct":   StructKeyword,
+	"async":    AsyncKeyword,
+	"work":     WorkKeyword,
+	"inline":   InlineKeyword,
+	"import":   ImportKeyword,
+	"defer":    DeferKeyword,
+	"func":     FunctionKeyword,
+	"return":   ReturnKeyword,
+	"default":  DefaultKeyword,
+	"break":    BreakKeyword,
+	"continue": ContinueKeyword,
 	// more stuff
 }
 

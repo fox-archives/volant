@@ -154,19 +154,16 @@ type (
 	}
 	Struct struct {
 		Identifier Token
-		Props      []StructPropStruct
+		Props      []Declaration
 	}
+	Break         struct{}
+	Continue      struct{}
 	NullStatement struct{}
 )
 
 type (
 	BasicLit struct {
-		Typ   BasicType
 		Value Token
-	}
-
-	IdentExpr struct {
-		Name Token
 	}
 
 	BinaryExpr struct {
@@ -178,6 +175,12 @@ type (
 	UnaryExpr struct {
 		Op   Token
 		Expr Expression
+	}
+
+	TernaryExpr struct {
+		Cond  Expression
+		Left  Expression
+		Right Expression
 	}
 
 	ArrExpr struct {
@@ -202,8 +205,8 @@ type (
 	}
 
 	FunctionCall struct {
-		Name Token
-		Args []Expression
+		Function Expression
+		Args     []Expression
 	}
 )
 
@@ -219,9 +222,10 @@ func (Enum) isStatement()          {}
 func (Tuple) isStatement()         {}
 func (Struct) isStatement()        {}
 func (NullStatement) isStatement() {}
+func (Break) isStatement()         {}
+func (Continue) isStatement()      {}
 
 func (BasicLit) isExpression()           {}
-func (IdentExpr) isExpression()          {}
 func (BinaryExpr) isExpression()         {}
 func (UnaryExpr) isExpression()          {}
 func (ArrExpr) isExpression()            {}
@@ -229,9 +233,9 @@ func (CallExpr) isExpression()           {}
 func (ParenExpr) isExpression()          {}
 func (FunctionCall) isExpression()       {}
 func (FunctionExpression) isExpression() {}
+func (TernaryExpr) isExpression()        {}
 
 func (BasicLit) isStatement()           {}
-func (IdentExpr) isStatement()          {}
 func (BinaryExpr) isStatement()         {}
 func (UnaryExpr) isStatement()          {}
 func (ArrExpr) isStatement()            {}
@@ -239,3 +243,4 @@ func (CallExpr) isStatement()           {}
 func (ParenExpr) isStatement()          {}
 func (FunctionCall) isStatement()       {}
 func (FunctionExpression) isStatement() {}
+func (TernaryExpr) isStatement()        {}

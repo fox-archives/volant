@@ -431,7 +431,7 @@ func (lexer *Lexer) lexOperator() Token {
 			return Token{PrimaryType: AssignmentOperator, SecondaryType: AddEqual, Buff: []byte("+="), Line: line, Column: column}
 		case '+':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: AddAdd, Buff: []byte("++"), Line: line, Column: column}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: AddAdd, Buff: []byte("++"), Line: line, Column: column}
 		default:
 			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Add, Buff: []byte("+"), Line: line, Column: column}
 		}

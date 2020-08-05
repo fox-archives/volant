@@ -76,6 +76,14 @@ func (c *Compiler) Statement(stmt Statement) {
 		c.assignment(stmt.(Assignment))
 	case Switch:
 		c.swtch(stmt.(Switch))
+	case Struct:
+		c.structTypedef(stmt.(Struct))
+	case Break:
+		c.indent()
+		c.append([]byte("break;"))
+	case Continue:
+		c.indent()
+		c.append([]byte("continue;"))
 	case NullStatement:
 		c.semicolon()
 	default:
@@ -232,13 +240,32 @@ func (c *Compiler) expression(expr Expression) {
 	switch expr.(type) {
 	case FunctionCall:
 		c.functionCall(expr.(FunctionCall))
-	default:
+	case BasicLit:
 		c.append(expr.(BasicLit).Value.Buff)
+	case BinaryExpr:
+		c.openParen()
+		c.expression(expr.(BinaryExpr).Left)
+		c.closeParen()
+		c.operator(expr.(BinaryExpr).Op)
+		c.openParen()
+		c.expression(expr.(BinaryExpr).Right)
+		c.closeParen()
+	case UnaryExpr:
+		c.operator(expr.(UnaryExpr).Op)
+
+		switch expr.(UnaryExpr).Expr.(type) {
+		case BasicLit:
+			c.expression(expr.(UnaryExpr).Expr)
+		default:
+			c.openParen()
+			c.expression(expr.(UnaryExpr).Expr)
+			c.closeParen()
+		}
 	}
 }
 
 func (c *Compiler) functionCall(call FunctionCall) {
-	c.append(call.Name.Buff)
+	c.expression(call.Function)
 	c.openParen()
 
 	if len(call.Args) > 0 {
@@ -276,9 +303,10 @@ func (c *Compiler) ifElse(ifElse IfElseBlock) {
 
 	c.indent()
 	for i, condition := range ifElse.Conditions {
-		c.append([]byte("if("))
+		c.append([]byte("if"))
+		c.openParen()
 		c.expression(condition)
-		c.append([]byte(")"))
+		c.closeParen()
 		c.block(ifElse.Blocks[i])
 		c.append([]byte(" else "))
 	}
@@ -327,14 +355,13 @@ func (c *Compiler) swtch(swtch Switch) {
 
 	c.indent()
 	c.append([]byte("switch"))
-	c.openParen()
 
+	c.openParen()
 	if swtch.Type == NoneSwtch {
 		c.append([]byte("1"))
 	} else {
 		c.expression(swtch.Condition)
 	}
-
 	c.closeParen()
 	c.openBrace()
 
@@ -382,17 +409,19 @@ func (c *Compiler) operator(op Token) {
 	c.append(op.Buff)
 }
 
-/*
-func (c *Compiler) structTypedef(st StructTypeStruct) {
-	c.append("typedef struct {")
+func (c *Compiler) structTypedef(st Struct) {
+	c.append([]byte("typedef struct {"))
+	c.newline()
+	c.pushScope()
 
-	for prop := range st.Props {
-		switch prop.Type.Type {
-		case IdentifierType:
-			c.basicTypeNoArray(prop.Type)
-			c.append(prop.Identifier.Buff)
-			c.append(";\n")
-		}
+	for _, prop := range st.Props {
+		c.declaration(prop)
 	}
+
+	c.popScope()
+	c.closeBrace()
+	c.space()
+	c.append(st.Identifier.Buff)
+	c.semicolon()
+	c.newline()
 }
-*/

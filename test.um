@@ -1,6 +1,9 @@
+struct Kaka {
+    a: *void;
+};
 
 main: func() int = func() int {
-    str, num: *char, int = "hehehehe", 100;
+    str, num: *char, int = "hehehehe", 100+ !100;
     // hehe this is a comment
     /*
     hehe this is a multiline comment
@@ -13,7 +16,7 @@ main: func() int = func() int {
         printf("hehe x is zero.\n");
     }
     
-    for i: int = 10; i; i,num-- {
+    for i: int = 10; i; --i {
         printf("i is %i and num is %i\n", i, num);
     }
 

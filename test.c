@@ -1,9 +1,12 @@
 #include <stdio.h>
 
+typedef struct {
+	void* a;
+} Kaka;
 
 int main(){
 	char* str = "hehehehe";
-	int num = 100;
+	int num = (100)+(!100);
 
 	{
 		int x = 0;
@@ -19,9 +22,7 @@ int main(){
 		int i = 10;
 		while(i){
 			printf("i is %i and num is %i\n", i, num);
-			i--;
-			num--;
-
+			--i;
 		}
 	}
 	{
