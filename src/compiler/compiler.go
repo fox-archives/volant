@@ -11,6 +11,10 @@ func (c *Compiler) append(buff []byte) {
 	c.Buff = append(c.Buff, []byte(buff)...)
 }
 
+func (c *Compiler) colon() {
+	c.append([]byte(":"))
+}
+
 func (c *Compiler) space() {
 	c.append([]byte(" "))
 }
@@ -58,95 +62,62 @@ func (c *Compiler) indent() {
 }
 
 func (c *Compiler) Statement(stmt Statement) {
-	c.indent()
-
+	c.newline()
 	switch stmt.(type) {
 	case Declaration:
 		c.declaration(stmt.(Declaration))
 	case Return:
 		c.rturn(stmt.(Return))
+	case IfElseBlock:
+		c.ifElse(stmt.(IfElseBlock))
+	case Loop:
+		c.loop(stmt.(Loop))
+	case Assignment:
+		c.assignment(stmt.(Assignment))
+	case Switch:
+		c.swtch(stmt.(Switch))
 	default:
+		c.indent()
 		c.expression(stmt.(Expression))
 		c.semicolon()
-		c.newline()
 	}
 }
 
-/*
-func (c *Compiler) statement(stmt StatementStruct) {
-	switch stmt.Type {
-	case ImportStatement:
-		c.imprt(stmt)
-	case StructTypedefStatement:
-		c.structTypedef(stmt.Struct)
-	case EnumTypedefStatement:
-		c.enumTypedef(stmt)
-	case TupleTypedefStatement:
-		c.tupleTypedef(stmt)
-	case DeclarationStatement:
-		c.declaration(stmt)
-	case AssignmentStatement:
-		c.assignment(stmt)
-	case IfElseStatement:
-		c.ifElse(stmt)
-	case LoopStatement:
-		c.loop(stmt)
-	case ReturnStatememt:
-		c.retrn(stmt)
-	case SwitchStatement:
-		c.swtch(stmt)
-	}
-}
+func (c *Compiler) loop(loop Loop) {
 
-func (c *Compiler) loop(loop LoopStruct) {
-	c.append("for(")
-
-	switch loop.Type {
-	case InitCondLoop:
-		c.statement(loop.InitStatement)
-		c.statement(loop.Condition)
-		c.statement(loop.LoopStatement)
-	case InitCond:
-		c.statement(loop.InitStatement)
-		c.statement(loop.Condition)
-		c.append(";")
-	case Cond:
-		c.append(";")
-		c.statement()
-		c.append(";")
-	case NoneLoop:
-		c.append(";;")
+	if loop.Type == InitCondLoop || loop.Type == InitCond {
+		c.indent()
+		c.openBrace()
+		c.pushScope()
+		c.Statement(loop.InitStatement)
 	}
 
-	c.append(")")
+	c.indent()
+	c.append([]byte("while"))
+	c.openParen()
+
+	if loop.Type == NoneLoop {
+		c.append([]byte("1"))
+	} else {
+		c.expression(loop.Condition)
+	}
+
+	c.closeParen()
+
+	if loop.Type == InitCondLoop {
+		loop.Block.Statements = append(loop.Block.Statements, loop.LoopStatement)
+	}
+
 	c.block(loop.Block)
+
+	if loop.Type == InitCondLoop || loop.Type == InitCond {
+		c.popScope()
+		c.newline()
+		c.indent()
+		c.closeBrace()
+	}
 }
 
-func (c *Compiler) block(block BlockStruct) {
-	c.append("{\n")
-	for stmt := range block.Statements {
-		c.statement(stmt)
-	}
-	c.append("\n}")
-}
-
-func (c *Compiler) ifElse(ifElse IfElseBlockStruct) {
-
-	if ifElse.InitStatement {
-		c.statement(ifElse.InitStatement)
-	}
-
-	for condition, i := range ifElse.Conditions {
-		c.append("if(")
-		c.expression(condition)
-		c.append(")")
-		c.block(ifElse.Blocks[i])
-		c.append("else ")
-	}
-
-	c.block(ElseBlock)
-}
-*/
 func (c *Compiler) declaration(dec Declaration) {
 	hasValues := len(dec.Values) > 0
 	//print(dec.Values[0].(BasicLit).Value.Buff)
@@ -158,6 +129,7 @@ func (c *Compiler) declaration(dec Declaration) {
 		switch Type.Type {
 		case IdentifierType:
 			for i, Var := range dec.Identifiers {
+				c.indent()
 				c.basicTypeNoArray(Type)
 				c.append([]byte(" "))
 				c.append(Var.Buff)
@@ -168,10 +140,43 @@ func (c *Compiler) declaration(dec Declaration) {
 				c.semicolon()
 				c.newline()
 			}
-			c.newline()
 		case FuncType:
 			for i, Var := range dec.Identifiers {
+				c.indent()
+				c.append(dec.Values[i].(FunctionExpression).ReturnTypes[0].Identifier.Buff)
+				c.space()
+				c.append(Var.Buff)
+				c.openParen()
 
+				for _, Arg := range dec.Values[i].(FunctionExpression).Args {
+					c.arg(Arg)
+				}
+
+				c.closeParen()
+				c.block(dec.Values[i].(FunctionExpression).Block)
+			}
+		}
+	default:
+		for i, Var := range dec.Identifiers {
+			Type := dec.Types[i]
+
+			switch Type.Type {
+			case IdentifierType:
+				c.indent()
+				c.basicTypeNoArray(Type)
+				c.space()
+				c.append(Var.Buff)
+
+				if hasValues {
+					c.append([]byte(" = "))
+					c.expression(dec.Values[i])
+				}
+
+				c.semicolon()
+				c.newline()
+
+			case FuncType:
+				c.indent()
 				c.append(dec.Values[i].(FunctionExpression).ReturnTypes[0].Identifier.Buff)
 				c.space()
 				c.append(Var.Buff)
@@ -189,6 +194,7 @@ func (c *Compiler) declaration(dec Declaration) {
 }
 
 func (c *Compiler) rturn(rtrn Return) {
+	c.indent()
 	c.append([]byte("return"))
 	c.space()
 
@@ -197,7 +203,6 @@ func (c *Compiler) rturn(rtrn Return) {
 	}
 
 	c.semicolon()
-	c.newline()
 }
 
 func (c *Compiler) arg(arg ArgStruct) {
@@ -210,12 +215,13 @@ func (c *Compiler) arg(arg ArgStruct) {
 
 func (c *Compiler) block(block Block) {
 	c.openBrace()
-	c.newline()
 	c.pushScope()
 	for _, statement := range block.Statements {
 		c.Statement(statement)
 	}
 	c.popScope()
+	c.newline()
+	c.indent()
 	c.closeBrace()
 }
 
@@ -223,23 +229,26 @@ func (c *Compiler) expression(expr Expression) {
 
 	switch expr.(type) {
 	case FunctionCall:
-		call := expr.(FunctionCall)
-		c.append(call.Name.Buff)
-		c.openParen()
-
-		if len(call.Args) > 0 {
-			c.expression(call.Args[0])
-
-			for i := 1; i < len(call.Args); i++ {
-				c.comma()
-				c.space()
-				c.expression(call.Args[i])
-			}
-		}
-		c.closeParen()
+		c.functionCall(expr.(FunctionCall))
 	default:
 		c.append(expr.(BasicLit).Value.Buff)
 	}
+}
+
+func (c *Compiler) functionCall(call FunctionCall) {
+	c.append(call.Name.Buff)
+	c.openParen()
+
+	if len(call.Args) > 0 {
+		c.expression(call.Args[0])
+
+		for i := 1; i < len(call.Args); i++ {
+			c.comma()
+			c.space()
+			c.expression(call.Args[i])
+		}
+	}
+	c.closeParen()
 }
 
 func (c *Compiler) identifier(identifer Token) {
@@ -254,13 +263,124 @@ func (c *Compiler) basicTypeNoArray(Type TypeStruct) {
 	}
 }
 
-/*
-func (c *Compiler) assignment(as AssignmentStruct) {
-	c.expression(as.Variable)
-	c.operator(as.Op)
-	c.expression(as.Value)
+func (c *Compiler) ifElse(ifElse IfElseBlock) {
+
+	if ifElse.HasInitStmt {
+		c.indent()
+		c.openBrace()
+		c.pushScope()
+		c.Statement(ifElse.InitStatement)
+	}
+
+	c.indent()
+	for i, condition := range ifElse.Conditions {
+		c.append([]byte("if("))
+		c.expression(condition)
+		c.append([]byte(")"))
+		c.block(ifElse.Blocks[i])
+		c.append([]byte(" else "))
+	}
+
+	c.block(ifElse.ElseBlock)
+
+	if ifElse.HasInitStmt {
+		c.popScope()
+		c.newline()
+		c.indent()
+		c.closeBrace()
+	}
 }
 
+func (c *Compiler) assignment(as Assignment) {
+
+	for i, Var := range as.Variables {
+		c.indent()
+		c.expression(Var)
+
+		if as.Op.SecondaryType != AddAdd && as.Op.SecondaryType != SubSub {
+			c.space()
+			c.operator(as.Op)
+			c.space()
+			if len(as.Values) > 1 {
+				c.expression(as.Values[i])
+			} else {
+				c.expression(as.Values[0])
+			}
+		} else {
+			c.operator(as.Op)
+		}
+
+		c.semicolon()
+		c.newline()
+	}
+}
+
+func (c *Compiler) swtch(swtch Switch) {
+	if swtch.Type == InitCondSwitch {
+		c.indent()
+		c.openBrace()
+		c.pushScope()
+		c.Statement(swtch.InitStatement)
+	}
+
+	c.indent()
+	c.append([]byte("switch"))
+	c.openParen()
+
+	if swtch.Type == NoneSwtch {
+		c.append([]byte("1"))
+	} else {
+		c.expression(swtch.Condition)
+	}
+
+	c.closeParen()
+	c.openBrace()
+
+	for _, Case := range swtch.Cases {
+		c.newline()
+		c.indent()
+		c.append([]byte("case"))
+		c.space()
+		c.expression(Case.Condition)
+		c.colon()
+
+		c.pushScope()
+		for _, stmt := range Case.Statements {
+			c.Statement(stmt)
+		}
+		c.popScope()
+	}
+
+	if swtch.HasDefaultCase {
+		c.newline()
+		c.indent()
+		c.append([]byte("default"))
+		c.colon()
+
+		c.pushScope()
+		for _, stmt := range swtch.DefaultCase.Statements {
+			c.Statement(stmt)
+		}
+		c.popScope()
+	}
+
+	c.newline()
+	c.indent()
+	c.closeBrace()
+
+	if swtch.Type == InitCondSwitch {
+		c.popScope()
+		c.newline()
+		c.indent()
+		c.closeBrace()
+	}
+}
+
+func (c *Compiler) operator(op Token) {
+	c.append(op.Buff)
+}
+
+/*
 func (c *Compiler) structTypedef(st StructTypeStruct) {
 	c.append("typedef struct {")
 

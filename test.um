@@ -1,5 +1,26 @@
 
-main: func() int = func() int { 
-    printf("heheheh\n");
+main: func() int = func() int {
+    str, num: *char, int = "hehehehe", 100;
+    
+    if x: int = 0; num {
+        printf("str is \"%s\" and num is %i.\n", str, num);
+    } else if x {
+        printf("hehe x is not xero.\n");
+    } else {
+        printf("hehe x is zero.\n");
+    }
+    
+    for i: int = 10; i; i,num-- {
+        printf("i is %i and num is %i\n", i, num);
+    }
+
+    switch p: int = 0; num {
+    case 90:
+        printf("num is 90.\n");
+        break;
+    default:
+        printf("num is not 90.\n");
+    }
+
     return 0;
 };

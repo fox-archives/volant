@@ -23,10 +23,10 @@ func (lexer *Lexer) readToBuffer() byte {
 func (lexer *Lexer) nextChar() (byte, bool) {
 	character, ok := lexer.peek()
 	if !ok {
-		return 0, ok
+		return 0, false
 	}
 	lexer.eatLastByte()
-	return character, false
+	return character, true
 }
 
 // get the next character without incrementing the position counter of lexer
@@ -365,131 +365,132 @@ func (lexer *Lexer) lexOperator() Token {
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: MulEqual, Buff: nil}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: MulEqual, Buff: []byte("*=")}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Mul, Buff: nil}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Mul, Buff: []byte("*")}
 		}
 	case '/':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: DivEqual, Buff: nil}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: DivEqual, Buff: []byte("/=")}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Div, Buff: nil}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Div, Buff: []byte("=")}
 		}
 	case '%':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: ModulusEqual, Buff: nil}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: ModulusEqual, Buff: []byte("%=")}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Modulus, Buff: nil}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Modulus, Buff: []byte("%")}
 		}
 	case '+':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: AddEqual, Buff: nil}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: AddEqual, Buff: []byte("+=")}
 		case '+':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: AddAdd, Buff: nil}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: AddAdd, Buff: []byte("++")}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Add, Buff: nil}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Add, Buff: []byte("+")}
 		}
 	case '-':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubEqual, Buff: nil}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubEqual, Buff: []byte("-=")}
 		case '-':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubSub, Buff: nil}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubSub, Buff: []byte("--")}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Sub, Buff: nil}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Sub, Buff: []byte("-")}
 		}
 	case '=':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: EqualEqual, Buff: nil}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: EqualEqual, Buff: []byte("==")}
 		default:
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: Equal, Buff: nil}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: Equal, Buff: []byte("=")}
 		}
 	case '!':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: NotEqual, Buff: nil}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: NotEqual, Buff: []byte("!=")}
 		default:
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: Not, Buff: nil}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: Not, Buff: []byte("!")}
 		}
 	case '>':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: GreaterEqual, Buff: nil}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: GreaterEqual, Buff: []byte(">=")}
 		case '>':
 			lexer.eatLastByte()
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: RightShift, Buff: nil}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: RightShift, Buff: []byte(">>")}
 		default:
-			return Token{PrimaryType: RelationalOperator, SecondaryType: Greater, Buff: nil}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: Greater, Buff: []byte(">")}
 		}
 	case '<':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: LessEqual, Buff: nil}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: LessEqual, Buff: []byte("<=")}
 		case '<':
 			lexer.eatLastByte()
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: LeftShift, Buff: nil}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: LeftShift, Buff: []byte("<<")}
 		default:
-			return Token{PrimaryType: RelationalOperator, SecondaryType: Less, Buff: nil}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: Less, Buff: []byte("<")}
 		}
 	case '&':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '&':
 			lexer.eatLastByte()
-			return Token{PrimaryType: LogicalOperator, SecondaryType: AndAnd, Buff: nil}
+			return Token{PrimaryType: LogicalOperator, SecondaryType: AndAnd, Buff: []byte("&&")}
 		default:
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: And, Buff: nil}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: And, Buff: []byte("&")}
 		}
 	case '|':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '|':
 			lexer.eatLastByte()
-			return Token{PrimaryType: LogicalOperator, SecondaryType: OrOr, Buff: nil}
+			return Token{PrimaryType: LogicalOperator, SecondaryType: OrOr, Buff: []byte("||")}
 		default:
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: Or, Buff: nil}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: Or, Buff: []byte("|")}
 		}
 	case '^':
 		lexer.eatLastByte()
-		return Token{PrimaryType: BitwiseOperator, SecondaryType: ExclusiveOr, Buff: nil}
+		return Token{PrimaryType: BitwiseOperator, SecondaryType: ExclusiveOr, Buff: []byte("^")}
 	case '.':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '.':
 			lexer.eatLastByte()
-			return Token{PrimaryType: SpecialOperator, SecondaryType: DotDot, Buff: nil}
+			return Token{PrimaryType: SpecialOperator, SecondaryType: DotDot, Buff: []byte("..")}
 		default:
-			return Token{PrimaryType: SpecialOperator, SecondaryType: Dot, Buff: nil}
+			return Token{PrimaryType: SpecialOperator, SecondaryType: Dot, Buff: []byte(".")}
 		}
 	case ':':
 		lexer.eatLastByte()
-		return Token{PrimaryType: SpecialOperator, SecondaryType: Colon, Buff: nil}
+		return Token{PrimaryType: SpecialOperator, SecondaryType: Colon, Buff: []byte(":")}
 	case '?':
 		lexer.eatLastByte()
-		return Token{PrimaryType: SpecialOperator, SecondaryType: QuesMark, Buff: nil}
+		return Token{PrimaryType: SpecialOperator, SecondaryType: QuesMark, Buff: []byte("?")}
 	}
+
 	return Token{PrimaryType: ErrorToken, SecondaryType: NotFound, Buff: nil}
 }
 

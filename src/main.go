@@ -25,8 +25,6 @@ func main() {
 		Buff:       []byte("#include <stdio.h>\n\n"),
 	}
 
-	p.Init()
-
 	for p.ReadToken().PrimaryType != parser.EOF {
 		c.Statement(p.ParseGlobalStatement())
 	}

@@ -9,7 +9,6 @@ type langError string
 
 const (
 	SyntaxError langError = "SyntaxError"
-	ParseError  langError = "ParseError"
 )
 
 func NewError(err langError, message string, line int, column int) {

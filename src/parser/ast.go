@@ -22,6 +22,14 @@ const (
 	NoneLoop     LoopType = 4
 )
 
+type SwitchType byte
+
+const (
+	InitCondSwitch SwitchType = 1
+	CondSwitch     SwitchType = 2
+	NoneSwtch      SwitchType = 3
+)
+
 type BasicType byte
 
 const (
@@ -82,8 +90,6 @@ type ArgStruct struct {
 	Type       TypeStruct
 }
 
-type SwitchType byte
-
 type CaseStruct struct {
 	Condition  Expression
 	Statements []Statement
@@ -118,11 +124,15 @@ type (
 		Block         Block
 	}
 	Switch struct {
-		InitStatement Statement
-		Expression    Expression
-		Cases         []CaseStruct
+		Type           SwitchType
+		InitStatement  Statement
+		Condition      Expression
+		Cases          []CaseStruct
+		HasDefaultCase bool
+		DefaultCase    Block
 	}
 	IfElseBlock struct {
+		HasInitStmt   bool
 		InitStatement Statement
 		Conditions    []Expression
 		Blocks        []Block
@@ -132,9 +142,9 @@ type (
 		Values []Expression
 	}
 	Assignment struct {
-		Variable Expression
-		Op       Token
-		Value    Expression
+		Variables []Expression
+		Op        Token
+		Values    []Expression
 	}
 	Enum struct {
 		Name        Token
