@@ -76,6 +76,8 @@ func (c *Compiler) Statement(stmt Statement) {
 		c.assignment(stmt.(Assignment))
 	case Switch:
 		c.swtch(stmt.(Switch))
+	case NullStatement:
+		c.semicolon()
 	default:
 		c.indent()
 		c.expression(stmt.(Expression))
@@ -85,7 +87,7 @@ func (c *Compiler) Statement(stmt Statement) {
 
 func (c *Compiler) loop(loop Loop) {
 
-	if loop.Type == InitCondLoop || loop.Type == InitCond {
+	if loop.Type&InitLoop == InitLoop {
 		c.indent()
 		c.openBrace()
 		c.pushScope()
@@ -96,21 +98,21 @@ func (c *Compiler) loop(loop Loop) {
 	c.append([]byte("while"))
 	c.openParen()
 
-	if loop.Type == NoneLoop {
-		c.append([]byte("1"))
-	} else {
+	if loop.Type&CondLoop == CondLoop {
 		c.expression(loop.Condition)
+	} else {
+		c.append([]byte("1"))
 	}
 
 	c.closeParen()
 
-	if loop.Type == InitCondLoop {
+	if loop.Type&LoopLoop == LoopLoop {
 		loop.Block.Statements = append(loop.Block.Statements, loop.LoopStatement)
 	}
 
 	c.block(loop.Block)
 
-	if loop.Type == InitCondLoop || loop.Type == InitCond {
+	if loop.Type&InitLoop == InitLoop {
 		c.popScope()
 		c.newline()
 		c.indent()

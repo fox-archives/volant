@@ -482,38 +482,52 @@ func (parser *Parser) parseIfElse() IfElseBlock {
 
 func (parser *Parser) parseLoop() Loop {
 	loop := Loop{}
+	loop.Type = 0
 
 	if parser.ReadToken().PrimaryType == LeftCurlyBrace {
-		loop.Type = NoneLoop
-	} else {
-		statement := parser.parseStatement()
+		loop.Type = loop.Type | NoneLoop
+
+		loop.Block = parser.parseBlock()
+		return loop
+	}
+
+	statement := parser.parseStatement()
+
+	if parser.ReadToken().PrimaryType == SemiColon {
+		parser.eatLastToken()
+
+		loop.Type = InitLoop
+		loop.InitStatement = statement
+
+		st := parser.parseStatement()
+
+		switch st.(type) {
+		case Expression:
+			loop.Condition = st.(Expression)
+			loop.Type = loop.Type | CondLoop
+		case NullStatement:
+			break
+		default:
+			// Error: expected expression, got {st}
+		}
 
 		if parser.ReadToken().PrimaryType == SemiColon {
 			parser.eatLastToken()
+		}
+		if parser.ReadToken().PrimaryType == LeftCurlyBrace {
+			loop.Block = parser.parseBlock()
+			return loop
+		}
 
-			loop.InitStatement = statement
-			loop.Condition = parser.parseExpression()
-
-			if parser.ReadToken().PrimaryType == SemiColon {
-				parser.eatLastToken()
-
-				if parser.ReadToken().PrimaryType == LeftCurlyBrace {
-					loop.Type = InitCond
-				} else {
-					loop.LoopStatement = parser.parseStatement()
-					loop.Type = InitCondLoop
-				}
-			} else {
-				loop.Type = InitCond
-			}
-		} else {
-			switch statement.(type) {
-			case Expression:
-				loop.Type = Cond
-				loop.Condition = statement.(Expression)
-			default:
-				// Error: expected an expression, got {statement}
-			}
+		loop.LoopStatement = parser.parseStatement()
+		loop.Type = loop.Type | LoopLoop
+	} else {
+		switch statement.(type) {
+		case Expression:
+			loop.Type = CondLoop
+			loop.Condition = statement.(Expression)
+		default:
+			// Error: expected an expression, got {statement}
 		}
 	}
 
@@ -657,6 +671,11 @@ func (parser *Parser) parseStatement() Statement {
 		return st
 	default:
 		parser.fork()
+
+		if parser.ReadToken().PrimaryType == SemiColon {
+			return NullStatement{}
+		}
+
 		expr := parser.parseExpression()
 
 		if token := parser.ReadToken(); token.PrimaryType == AssignmentOperator {

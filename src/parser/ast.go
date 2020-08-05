@@ -4,22 +4,19 @@ type FunctionType byte
 
 // Never change these numbers, they are very sepcific
 const (
-	OrdFunction         FunctionType = 1
-	AsyncFunction       FunctionType = 2
-	WorkFunction        FunctionType = 4
-	InlineFunction      FunctionType = 8
-	InlineOrdFunction   FunctionType = 9
-	InlineAsyncFunction FunctionType = 10
-	InlineWorkFunction  FunctionType = 12
+	OrdFunction    FunctionType = 1
+	AsyncFunction  FunctionType = 2
+	WorkFunction   FunctionType = 4
+	InlineFunction FunctionType = 8
 )
 
 type LoopType byte
 
 const (
-	InitCondLoop LoopType = 1
-	InitCond     LoopType = 2
-	Cond         LoopType = 3
-	NoneLoop     LoopType = 4
+	InitLoop LoopType = 1
+	CondLoop LoopType = 2
+	LoopLoop LoopType = 4
+	NoneLoop LoopType = 8
 )
 
 type SwitchType byte
@@ -159,6 +156,7 @@ type (
 		Identifier Token
 		Props      []StructPropStruct
 	}
+	NullStatement struct{}
 )
 
 type (
@@ -209,17 +207,18 @@ type (
 	}
 )
 
-func (Block) isStatement()       {}
-func (Declaration) isStatement() {}
-func (Import) isStatement()      {}
-func (Loop) isStatement()        {}
-func (Switch) isStatement()      {}
-func (IfElseBlock) isStatement() {}
-func (Return) isStatement()      {}
-func (Assignment) isStatement()  {}
-func (Enum) isStatement()        {}
-func (Tuple) isStatement()       {}
-func (Struct) isStatement()      {}
+func (Block) isStatement()         {}
+func (Declaration) isStatement()   {}
+func (Import) isStatement()        {}
+func (Loop) isStatement()          {}
+func (Switch) isStatement()        {}
+func (IfElseBlock) isStatement()   {}
+func (Return) isStatement()        {}
+func (Assignment) isStatement()    {}
+func (Enum) isStatement()          {}
+func (Tuple) isStatement()         {}
+func (Struct) isStatement()        {}
+func (NullStatement) isStatement() {}
 
 func (BasicLit) isExpression()           {}
 func (IdentExpr) isExpression()          {}

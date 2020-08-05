@@ -1,7 +1,10 @@
 
 main: func() int = func() int {
     str, num: *char, int = "hehehehe", 100;
-    
+    // hehe this is a comment
+    /*
+    hehe this is a multiline comment
+    */
     if x: int = 0; num {
         printf("str is \"%s\" and num is %i.\n", str, num);
     } else if x {

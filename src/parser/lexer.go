@@ -70,6 +70,29 @@ func (lexer *Lexer) skipSpaces() {
 	}
 }
 
+func (lexer *Lexer) skipUntilNewline() {
+	for next, _ := lexer.peek(); next != '\n'; next, _ = lexer.peek() {
+		lexer.eatLastByte()
+	}
+}
+
+func (lexer *Lexer) multilineComment() {
+	for next, _ := lexer.peek(); ; next, _ = lexer.peek() {
+		if next != '*' {
+			lexer.eatLastByte()
+			continue
+		}
+		lexer.eatLastByte()
+
+		if next2, _ := lexer.peek(); next2 != '/' {
+			continue
+		}
+
+		lexer.eatLastByte()
+		break
+	}
+}
+
 // NextToken returns next token
 func (lexer *Lexer) NextToken() Token {
 	lexer.skipSpaces() // skiping spaces/tabs/newlines
@@ -90,6 +113,16 @@ func (lexer *Lexer) NextToken() Token {
 		return lexer.lexChar() // just a single byte
 	} else {
 		if op := lexer.lexOperator(); op.SecondaryType != NotFound {
+			if op.SecondaryType == Div {
+				if next, _ := lexer.peek(); next == byte('/') {
+					lexer.skipUntilNewline()
+					return lexer.NextToken()
+				} else if next == '*' {
+					lexer.eatLastByte()
+					lexer.multilineComment()
+					return lexer.NextToken()
+				}
+			}
 			return op
 		} else if op = lexer.lexDelimiter(); op.SecondaryType != NotFound {
 			return op
@@ -359,168 +392,174 @@ func (lexer *Lexer) lexWord() Token {
 }
 
 func (lexer *Lexer) lexOperator() Token {
+	line := lexer.Line
+	column := lexer.Column
+
 	switch character, _ := lexer.peek(); character {
 	case '*':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: MulEqual, Buff: []byte("*=")}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: MulEqual, Buff: []byte("*="), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Mul, Buff: []byte("*")}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Mul, Buff: []byte("*"), Line: line, Column: column}
 		}
 	case '/':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: DivEqual, Buff: []byte("/=")}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: DivEqual, Buff: []byte("/="), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Div, Buff: []byte("=")}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Div, Buff: []byte("="), Line: line, Column: column}
 		}
 	case '%':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: ModulusEqual, Buff: []byte("%=")}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: ModulusEqual, Buff: []byte("%="), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Modulus, Buff: []byte("%")}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Modulus, Buff: []byte("%"), Line: line, Column: column}
 		}
 	case '+':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: AddEqual, Buff: []byte("+=")}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: AddEqual, Buff: []byte("+="), Line: line, Column: column}
 		case '+':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: AddAdd, Buff: []byte("++")}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: AddAdd, Buff: []byte("++"), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Add, Buff: []byte("+")}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Add, Buff: []byte("+"), Line: line, Column: column}
 		}
 	case '-':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubEqual, Buff: []byte("-=")}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubEqual, Buff: []byte("-="), Line: line, Column: column}
 		case '-':
 			lexer.eatLastByte()
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubSub, Buff: []byte("--")}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: SubSub, Buff: []byte("--"), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Sub, Buff: []byte("-")}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Sub, Buff: []byte("-"), Line: line, Column: column}
 		}
 	case '=':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: EqualEqual, Buff: []byte("==")}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: EqualEqual, Buff: []byte("=="), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: AssignmentOperator, SecondaryType: Equal, Buff: []byte("=")}
+			return Token{PrimaryType: AssignmentOperator, SecondaryType: Equal, Buff: []byte("="), Line: line, Column: column}
 		}
 	case '!':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: NotEqual, Buff: []byte("!=")}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: NotEqual, Buff: []byte("!="), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: Not, Buff: []byte("!")}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: Not, Buff: []byte("!"), Line: line, Column: column}
 		}
 	case '>':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: GreaterEqual, Buff: []byte(">=")}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: GreaterEqual, Buff: []byte(">="), Line: line, Column: column}
 		case '>':
 			lexer.eatLastByte()
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: RightShift, Buff: []byte(">>")}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: RightShift, Buff: []byte(">>"), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: RelationalOperator, SecondaryType: Greater, Buff: []byte(">")}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: Greater, Buff: []byte(">"), Line: line, Column: column}
 		}
 	case '<':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '=':
 			lexer.eatLastByte()
-			return Token{PrimaryType: RelationalOperator, SecondaryType: LessEqual, Buff: []byte("<=")}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: LessEqual, Buff: []byte("<="), Line: line, Column: column}
 		case '<':
 			lexer.eatLastByte()
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: LeftShift, Buff: []byte("<<")}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: LeftShift, Buff: []byte("<<"), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: RelationalOperator, SecondaryType: Less, Buff: []byte("<")}
+			return Token{PrimaryType: RelationalOperator, SecondaryType: Less, Buff: []byte("<"), Line: line, Column: column}
 		}
 	case '&':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '&':
 			lexer.eatLastByte()
-			return Token{PrimaryType: LogicalOperator, SecondaryType: AndAnd, Buff: []byte("&&")}
+			return Token{PrimaryType: LogicalOperator, SecondaryType: AndAnd, Buff: []byte("&&"), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: And, Buff: []byte("&")}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: And, Buff: []byte("&"), Line: line, Column: column}
 		}
 	case '|':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '|':
 			lexer.eatLastByte()
-			return Token{PrimaryType: LogicalOperator, SecondaryType: OrOr, Buff: []byte("||")}
+			return Token{PrimaryType: LogicalOperator, SecondaryType: OrOr, Buff: []byte("||"), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: BitwiseOperator, SecondaryType: Or, Buff: []byte("|")}
+			return Token{PrimaryType: BitwiseOperator, SecondaryType: Or, Buff: []byte("|"), Line: line, Column: column}
 		}
 	case '^':
 		lexer.eatLastByte()
-		return Token{PrimaryType: BitwiseOperator, SecondaryType: ExclusiveOr, Buff: []byte("^")}
+		return Token{PrimaryType: BitwiseOperator, SecondaryType: ExclusiveOr, Buff: []byte("^"), Line: line, Column: column}
 	case '.':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
 		case '.':
 			lexer.eatLastByte()
-			return Token{PrimaryType: SpecialOperator, SecondaryType: DotDot, Buff: []byte("..")}
+			return Token{PrimaryType: SpecialOperator, SecondaryType: DotDot, Buff: []byte(".."), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: SpecialOperator, SecondaryType: Dot, Buff: []byte(".")}
+			return Token{PrimaryType: SpecialOperator, SecondaryType: Dot, Buff: []byte("."), Line: line, Column: column}
 		}
 	case ':':
 		lexer.eatLastByte()
-		return Token{PrimaryType: SpecialOperator, SecondaryType: Colon, Buff: []byte(":")}
+		return Token{PrimaryType: SpecialOperator, SecondaryType: Colon, Buff: []byte(":"), Line: line, Column: column}
 	case '?':
 		lexer.eatLastByte()
-		return Token{PrimaryType: SpecialOperator, SecondaryType: QuesMark, Buff: []byte("?")}
+		return Token{PrimaryType: SpecialOperator, SecondaryType: QuesMark, Buff: []byte("?"), Line: line, Column: column}
 	}
 
-	return Token{PrimaryType: ErrorToken, SecondaryType: NotFound, Buff: nil}
+	return Token{PrimaryType: ErrorToken, SecondaryType: NotFound, Buff: nil, Line: line, Column: column}
 }
 
 func (lexer *Lexer) lexDelimiter() Token {
+	line := lexer.Line
+	column := lexer.Column
+
 	switch character, _ := lexer.peek(); character {
 	case '(':
 		lexer.eatLastByte()
-		return Token{PrimaryType: LeftParen, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: LeftParen, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	case ')':
 		lexer.eatLastByte()
-		return Token{PrimaryType: RightParen, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: RightParen, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	case '{':
 		lexer.eatLastByte()
-		return Token{PrimaryType: LeftCurlyBrace, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: LeftCurlyBrace, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	case '}':
 		lexer.eatLastByte()
-		return Token{PrimaryType: RightCurlyBrace, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: RightCurlyBrace, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	case '[':
 		lexer.eatLastByte()
-		return Token{PrimaryType: LeftBrace, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: LeftBrace, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	case ']':
 		lexer.eatLastByte()
-		return Token{PrimaryType: RightBrace, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: RightBrace, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	case ';':
 		lexer.eatLastByte()
-		return Token{PrimaryType: SemiColon, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: SemiColon, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	case ',':
 		lexer.eatLastByte()
-		return Token{PrimaryType: Comma, SecondaryType: SecondaryNullType, Buff: nil}
+		return Token{PrimaryType: Comma, SecondaryType: SecondaryNullType, Buff: nil, Line: line, Column: column}
 	}
 
-	return Token{PrimaryType: ErrorToken, SecondaryType: NotFound, Buff: nil}
+	return Token{PrimaryType: ErrorToken, SecondaryType: NotFound, Buff: nil, Line: line, Column: column}
 }
