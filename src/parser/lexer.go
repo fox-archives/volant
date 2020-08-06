@@ -507,9 +507,6 @@ func (lexer *Lexer) lexOperator() Token {
 		default:
 			return Token{PrimaryType: BitwiseOperator, SecondaryType: Or, Buff: []byte("|"), Line: line, Column: column}
 		}
-	case '^':
-		lexer.eatLastByte()
-		return Token{PrimaryType: BitwiseOperator, SecondaryType: ExclusiveOr, Buff: []byte("^"), Line: line, Column: column}
 	case '.':
 		lexer.eatLastByte()
 		switch next, _ := lexer.peek(); next {
@@ -519,6 +516,12 @@ func (lexer *Lexer) lexOperator() Token {
 		default:
 			return Token{PrimaryType: SpecialOperator, SecondaryType: Dot, Buff: []byte("."), Line: line, Column: column}
 		}
+	case '^':
+		lexer.eatLastByte()
+		return Token{PrimaryType: BitwiseOperator, SecondaryType: ExclusiveOr, Buff: []byte("^"), Line: line, Column: column}
+	case '~':
+		lexer.eatLastByte()
+		return Token{PrimaryType: BitwiseOperator, SecondaryType: BitwiseNot, Buff: []byte("~"), Line: line, Column: column}
 	case ':':
 		lexer.eatLastByte()
 		return Token{PrimaryType: SpecialOperator, SecondaryType: Colon, Buff: []byte(":"), Line: line, Column: column}

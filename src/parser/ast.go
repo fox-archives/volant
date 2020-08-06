@@ -177,6 +177,11 @@ type (
 		Expr Expression
 	}
 
+	PostfixUnaryExpr struct {
+		Op   Token
+		Expr Expression
+	}
+
 	TernaryExpr struct {
 		Cond  Expression
 		Left  Expression
@@ -185,12 +190,6 @@ type (
 
 	ArrExpr struct {
 		Expr []Expression
-	}
-
-	CallExpr struct {
-		Func []byte
-		Type FunctionType
-		Args []Expression
 	}
 
 	ParenExpr struct {
@@ -204,9 +203,23 @@ type (
 		Block       Block
 	}
 
-	FunctionCall struct {
+	CallExpr struct {
 		Function Expression
 		Args     []Expression
+	}
+
+	TypeCast struct {
+		Type TypeStruct
+		Expr Expression
+	}
+
+	IdentExpr struct {
+		Value Token
+	}
+
+	MemberExpr struct {
+		Base Token
+		Expr Expression
 	}
 )
 
@@ -231,9 +244,12 @@ func (UnaryExpr) isExpression()          {}
 func (ArrExpr) isExpression()            {}
 func (CallExpr) isExpression()           {}
 func (ParenExpr) isExpression()          {}
-func (FunctionCall) isExpression()       {}
 func (FunctionExpression) isExpression() {}
 func (TernaryExpr) isExpression()        {}
+func (PostfixUnaryExpr) isExpression()   {}
+func (TypeCast) isExpression()           {}
+func (IdentExpr) isExpression()          {}
+func (MemberExpr) isExpression()         {}
 
 func (BasicLit) isStatement()           {}
 func (BinaryExpr) isStatement()         {}
@@ -241,6 +257,9 @@ func (UnaryExpr) isStatement()          {}
 func (ArrExpr) isStatement()            {}
 func (CallExpr) isStatement()           {}
 func (ParenExpr) isStatement()          {}
-func (FunctionCall) isStatement()       {}
 func (FunctionExpression) isStatement() {}
 func (TernaryExpr) isStatement()        {}
+func (PostfixUnaryExpr) isStatement()   {}
+func (TypeCast) isStatement()           {}
+func (IdentExpr) isStatement()          {}
+func (MemberExpr) isStatement()         {}

@@ -22,7 +22,7 @@ func main() {
 
 	var c = compiler.Compiler{
 		ScopeCount: 0,
-		Buff:       []byte("#include <stdio.h>\n"),
+		Buff:       []byte("#include <stdio.h>\n#include <stdlib.h>\n"),
 	}
 
 	for p.ReadToken().PrimaryType != parser.EOF {

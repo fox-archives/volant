@@ -755,7 +755,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 
 		if token := parser.ReadToken(); token.SecondaryType == QuesMark {
 			parser.eatLastToken()
-			Left := parser.parseExpr(0)
+			Left := parser.parseExpr(1)
 
 			parser.expect(PrimaryNullType, Colon)
 			parser.eatLastToken()
@@ -771,7 +771,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 		if token := parser.ReadToken(); token.PrimaryType == LogicalOperator {
 			parser.eatLastToken()
 			Op := token
-			Right := parser.parseExpr(2)
+			Right := parser.parseExpr(0)
 
 			return BinaryExpr{Left, Op, Right}
 		}
@@ -782,7 +782,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 		if token := parser.ReadToken(); token.SecondaryType == Or || token.SecondaryType == And || token.SecondaryType == ExclusiveOr {
 			parser.eatLastToken()
 			Op := token
-			Right := parser.parseExpr(3)
+			Right := parser.parseExpr(0)
 
 			return BinaryExpr{Left, Op, Right}
 		}
@@ -793,7 +793,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 		if token := parser.ReadToken(); token.SecondaryType == EqualEqual || token.SecondaryType == NotEqual {
 			parser.eatLastToken()
 			Op := token
-			Right := parser.parseExpr(4)
+			Right := parser.parseExpr(0)
 
 			return BinaryExpr{Left, Op, Right}
 		}
@@ -804,7 +804,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 		if token := parser.ReadToken(); token.SecondaryType == Greater || token.SecondaryType == Less || token.SecondaryType == LessEqual || token.SecondaryType == GreaterEqual {
 			parser.eatLastToken()
 			Op := token
-			Right := parser.parseExpr(5)
+			Right := parser.parseExpr(0)
 
 			return BinaryExpr{Left, Op, Right}
 		}
@@ -815,7 +815,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 		if token := parser.ReadToken(); token.SecondaryType == LeftShift || token.SecondaryType == RightShift {
 			parser.eatLastToken()
 			Op := token
-			Right := parser.parseExpr(6)
+			Right := parser.parseExpr(0)
 
 			return BinaryExpr{Left, Op, Right}
 		}
@@ -826,7 +826,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 		if token := parser.ReadToken(); token.SecondaryType == Add || token.SecondaryType == Sub {
 			parser.eatLastToken()
 			Op := token
-			Right := parser.parseExpr(7)
+			Right := parser.parseExpr(0)
 
 			return BinaryExpr{Left, Op, Right}
 		}
@@ -837,38 +837,67 @@ func (parser *Parser) parseExpr(state int) Expression {
 		if token := parser.ReadToken(); token.SecondaryType == Mul || token.SecondaryType == Div || token.SecondaryType == Modulus {
 			parser.eatLastToken()
 			Op := token
-			Right := parser.parseExpr(8)
+			Right := parser.parseExpr(0)
 
 			return BinaryExpr{Left, Op, Right}
 		}
 		return Left
-	case 8: // unary */&/+/-/++/--/!/~
-		if token := parser.ReadToken(); token.SecondaryType == Mul || token.SecondaryType == And || token.SecondaryType == Add || token.SecondaryType == Sub || token.SecondaryType == AddAdd || token.SecondaryType == SubSub || token.SecondaryType == Not {
+	case 8: // unary */&/+/-/++/--/!/~, parenthesis, type casts
+		if token := parser.ReadToken(); token.SecondaryType == Mul || token.SecondaryType == And || token.SecondaryType == Add || token.SecondaryType == Sub || token.SecondaryType == AddAdd || token.SecondaryType == SubSub || token.SecondaryType == Not || token.SecondaryType == BitwiseNot {
 			parser.eatLastToken()
 			Op := token
-			Expr := parser.parseExpr(9)
+			Expr := parser.parseExpr(0)
 
 			return UnaryExpr{Op, Expr}
+		} else if token.PrimaryType == LeftParen {
+			parser.eatLastToken()
+			expr := parser.parseExpr(0)
+			parser.expect(RightParen, SecondaryNullType)
+			parser.eatLastToken()
+			return expr
 		}
 		return parser.parseExpr(9)
-	case 9: // function calls
+	case 9: // function call, postfix ++/--, . op, compound literal
 		expr := parser.parseExpr(10)
 
-		if parser.ReadToken().PrimaryType == LeftParen {
+		if token := parser.ReadToken(); token.PrimaryType == LeftParen {
 			parser.eatLastToken()
-			call := FunctionCall{Function: expr, Args: parser.parseExpressionArray()}
+
+			if parser.ReadToken().PrimaryType == RightParen {
+				return CallExpr{Function: expr, Args: []Expression{}}
+			}
+			call := CallExpr{Function: expr, Args: parser.parseExpressionArray()}
 			parser.expect(RightParen, SecondaryNullType)
 			parser.eatLastToken()
 			return call
+		} else if token.SecondaryType == AddAdd || token.SecondaryType == SubSub {
+			parser.eatLastToken()
+			return PostfixUnaryExpr{Op: token, Expr: parser.parseExpr(0)}
 		}
 
 		return expr
-	case 10: // literal
+	case 10: // literals
 		token := parser.ReadToken()
 		parser.eatLastToken()
 
 		if token.PrimaryType == FunctionKeyword {
 			return parser.parseFunctionExpression()
+		} else if token.PrimaryType == Identifier {
+			if parser.ReadToken().SecondaryType == Dot {
+				parser.eatLastToken()
+				expr := parser.parseExpr(0)
+
+				switch expr.(type) {
+				case IdentExpr:
+					return MemberExpr{Base: token, Expr: expr}
+				case CallExpr:
+					return MemberExpr{Base: token, Expr: expr}
+				case MemberExpr:
+					return MemberExpr{Base: token, Expr: expr}
+				}
+				// Error: expected identifier, got {expr}
+			}
+			return IdentExpr{Value: token}
 		}
 		return BasicLit{Value: token}
 	}

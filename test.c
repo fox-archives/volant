@@ -1,13 +1,16 @@
 #include <stdio.h>
-
-typedef struct {
-	void* a;
-} Kaka;
+#include <stdlib.h>
 
 int main(){
 	char* str = "hehehehe";
-	int num = (100)+(!100);
+	int num = 100+(20+(100+(10+10)));
 
+	char* mem = malloc((sizeof(char))*10);
+
+	printf("Exter something: ");
+	scanf("%s", mem);
+	printf("You entered %s.\nRandom stuff below...\n", mem);
+	free(mem);
 	{
 		int x = 0;
 		if(num){

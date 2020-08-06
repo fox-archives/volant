@@ -1,13 +1,15 @@
-struct Kaka {
-    a: *void;
-};
 
 main: func() int = func() int {
-    str, num: *char, int = "hehehehe", 100+ !100;
-    // hehe this is a comment
-    /*
-    hehe this is a multiline comment
-    */
+    str, num: *char, int = "hehehehe", 100+ 20 + 100+(10+10);
+
+    mem: *char = malloc(sizeof(char)*10);
+
+    printf("Exter something: ");
+    scanf("%s", mem);
+    printf("You entered %s.\nRandom stuff below...\n", mem);
+
+    free(mem);
+
     if x: int = 0; num {
         printf("str is \"%s\" and num is %i.\n", str, num);
     } else if x {

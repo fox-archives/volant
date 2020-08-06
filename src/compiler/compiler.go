@@ -238,33 +238,58 @@ func (c *Compiler) block(block Block) {
 func (c *Compiler) expression(expr Expression) {
 
 	switch expr.(type) {
-	case FunctionCall:
-		c.functionCall(expr.(FunctionCall))
+	case CallExpr:
+		c.functionCall(expr.(CallExpr))
 	case BasicLit:
 		c.append(expr.(BasicLit).Value.Buff)
+	case IdentExpr:
+		c.append(expr.(IdentExpr).Value.Buff)
 	case BinaryExpr:
-		c.openParen()
-		c.expression(expr.(BinaryExpr).Left)
-		c.closeParen()
+
+		switch expr.(BinaryExpr).Left.(type) {
+		case BasicLit:
+			c.expression(expr.(BinaryExpr).Left)
+		case IdentExpr:
+			c.expression(expr.(BinaryExpr).Right)
+		default:
+			c.openParen()
+			c.expression(expr.(BinaryExpr).Left)
+			c.closeParen()
+		}
+
 		c.operator(expr.(BinaryExpr).Op)
-		c.openParen()
-		c.expression(expr.(BinaryExpr).Right)
-		c.closeParen()
+
+		switch expr.(BinaryExpr).Right.(type) {
+		case BasicLit:
+			c.expression(expr.(BinaryExpr).Right)
+		case IdentExpr:
+			c.expression(expr.(BinaryExpr).Right)
+		default:
+			c.openParen()
+			c.expression(expr.(BinaryExpr).Right)
+			c.closeParen()
+		}
 	case UnaryExpr:
 		c.operator(expr.(UnaryExpr).Op)
 
 		switch expr.(UnaryExpr).Expr.(type) {
 		case BasicLit:
 			c.expression(expr.(UnaryExpr).Expr)
+		case IdentExpr:
+			c.expression(expr.(UnaryExpr).Expr)
 		default:
 			c.openParen()
 			c.expression(expr.(UnaryExpr).Expr)
 			c.closeParen()
 		}
+	case MemberExpr:
+		c.append(expr.(MemberExpr).Base.Buff)
+		c.append([]byte("."))
+		c.expression(expr.(MemberExpr).Expr)
 	}
 }
 
-func (c *Compiler) functionCall(call FunctionCall) {
+func (c *Compiler) functionCall(call CallExpr) {
 	c.expression(call.Function)
 	c.openParen()
 

@@ -110,6 +110,7 @@ const (
 	Or          SecondaryTokenType = 53
 	And         SecondaryTokenType = 54
 	ExclusiveOr SecondaryTokenType = 55
+	BitwiseNot  SecondaryTokenType = 56
 
 	// Special Operators
 	Colon    SecondaryTokenType = 61
