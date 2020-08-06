@@ -2,14 +2,25 @@ struct Kaka {
     a, b: int;
 };
 
+enum Kakak {
+    a = 0,
+    b,
+    c,
+    d
+};
+
+tuple Kakakak {char, int};
+
 main: func() int = func() int {
     str, num: *char, int = "hehehehe", (10+10)*10;
 
     mem: *char = malloc(sizeof(char)*10);
     
     p: Kaka = (Kaka){a: 0, b: 0};
+    q: Kakakak = (Kakakak){0, 0};
 
     printf("p.a is %i and p.b is %i.\n", p.a, p.b);
+    printf("q[0] is %i and q[1] is %i.\n", q._0, q._1);
 
     printf("Enter something: ");
     scanf("%s", mem);

@@ -9,6 +9,18 @@ typedef struct {
 	int b;
 } Kaka;
 
+typedef enum {
+	a = 0,
+	b,
+	c,
+	d,
+} Kakak;
+
+typedef struct {
+	char _0;
+	int _1;
+} Kakakak;
+
 int main(){
 	char* str = "hehehehe";
 	int num = (10+10)*10;
@@ -17,7 +29,10 @@ int main(){
 
 	Kaka p = (Kaka){.a = 0, .b = 0, };
 
+	Kakakak q = (Kakakak){0, 0, };
+
 	printf("p.a is %i and p.b is %i.\n", p.a, p.b);
+	printf("q[0] is %i and q[1] is %i.\n", q._0, q._1);
 	printf("Enter something: ");
 	scanf("%s", mem);
 	printf("First letter of what you entered is %c.\n", mem[0]);

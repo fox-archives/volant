@@ -50,26 +50,28 @@ func (parser *Parser) expect(primary PrimaryTokenType, secondary SecondaryTokenT
 func (parser *Parser) ParseGlobalStatement() Statement {
 	var statement Statement
 
-	if token := parser.ReadToken(); token.PrimaryType == ImportKeyword {
+	switch token := parser.ReadToken(); token.PrimaryType {
+	case ImportKeyword:
 		parser.eatLastToken()
 		statement = parser.parseImport()
-	} else if token.PrimaryType == StructKeyword {
+	case StructKeyword:
 		parser.eatLastToken()
 		statement = parser.parseStructTypedef()
-	} else if token.PrimaryType == EnumKeyword {
+	case EnumKeyword:
 		parser.eatLastToken()
 		statement = parser.parseEnumTypedef()
-	} else if token.PrimaryType == TupleKeyword {
+	case TupleKeyword:
 		parser.eatLastToken()
 		statement = parser.parseTupleTypedef()
-	} else if token.PrimaryType == Identifier {
+	case Identifier:
 		statement = parser.parseDeclaration()
-	} else {
+	default:
 		// Error: Invalid token {token}
 	}
 
-	parser.expect(SemiColon, SecondaryNullType)
-	parser.eatLastToken()
+	if parser.ReadToken().PrimaryType == SemiColon {
+		parser.eatLastToken()
+	}
 
 	return statement
 }
@@ -276,23 +278,33 @@ func (parser *Parser) parseEnumType() Enum {
 	parser.expect(LeftCurlyBrace, SecondaryNullType)
 	parser.eatLastToken()
 
+	enum.Identifiers = append(enum.Identifiers, parser.expect(Identifier, SecondaryNullType))
+	parser.eatLastToken()
+
+	if parser.ReadToken().SecondaryType == Equal {
+		parser.eatLastToken()
+		enum.Values = append(enum.Values, parser.parseExpression())
+	} else {
+		enum.Values = append(enum.Values, nil)
+	}
+
 	for parser.ReadToken().PrimaryType == Comma {
 		parser.eatLastToken()
 
-		token := parser.expect(Identifier, SecondaryNullType)
+		enum.Identifiers = append(enum.Identifiers, parser.expect(Identifier, SecondaryNullType))
 		parser.eatLastToken()
 
-		enum.Identifiers = append(enum.Identifiers, token)
-
-		if token2 := parser.ReadToken(); token2.SecondaryType == Equal {
+		if parser.ReadToken().SecondaryType == Equal {
 			parser.eatLastToken()
 			enum.Values = append(enum.Values, parser.parseExpression())
-		} /* else {
-			enum.Values = append(enum.Values)
-		} */
+		} else {
+			enum.Values = append(enum.Values, nil)
+		}
 	}
 
 	parser.expect(RightCurlyBrace, SecondaryNullType)
+	parser.eatLastToken()
+
 	return enum
 }
 

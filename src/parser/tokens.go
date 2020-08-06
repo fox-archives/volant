@@ -149,6 +149,7 @@ var Keywords = map[string]PrimaryTokenType{
 	"default":  DefaultKeyword,
 	"break":    BreakKeyword,
 	"continue": ContinueKeyword,
+	"tuple":    TupleKeyword,
 	// more stuff
 }
 

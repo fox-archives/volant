@@ -1,6 +1,9 @@
 package compiler
 
-import . "parser"
+import (
+	. "parser"
+	"strconv"
+)
 
 type Compiler struct {
 	Buff       []byte
@@ -94,6 +97,10 @@ func (c *Compiler) Statement(stmt Statement) {
 		c.swtch(stmt.(Switch))
 	case Struct:
 		c.structTypedef(stmt.(Struct))
+	case Enum:
+		c.enumTypedef(stmt.(Enum))
+	case Tuple:
+		c.tupleTypedef(stmt.(Tuple))
 	case Break:
 		c.indent()
 		c.append([]byte("break;"))
@@ -528,6 +535,58 @@ func (c *Compiler) structTypedef(st Struct) {
 	c.closeCurlyBrace()
 	c.space()
 	c.append(st.Identifier.Buff)
+	c.semicolon()
+	c.newline()
+}
+
+func (c *Compiler) enumTypedef(en Enum) {
+	c.append([]byte("typedef enum {"))
+	c.newline()
+	c.pushScope()
+
+	for x, prop := range en.Identifiers {
+		c.indent()
+		c.append(prop.Buff)
+		val := en.Values[x]
+
+		if val != nil {
+			c.space()
+			c.equal()
+			c.space()
+			c.expression(val)
+		}
+		c.comma()
+		c.newline()
+	}
+
+	c.popScope()
+	c.closeCurlyBrace()
+	c.space()
+	c.append(en.Name.Buff)
+	c.semicolon()
+	c.newline()
+}
+
+func (c *Compiler) tupleTypedef(en Tuple) {
+	c.append([]byte("typedef struct {"))
+	c.newline()
+	c.pushScope()
+
+	for x, prop := range en.Types {
+		c.indent()
+		c.basicTypeNoArray(prop)
+		c.space()
+
+		c.append([]byte("_" + strconv.Itoa(x)))
+
+		c.semicolon()
+		c.newline()
+	}
+
+	c.popScope()
+	c.closeCurlyBrace()
+	c.space()
+	c.append(en.Identifier.Buff)
 	c.semicolon()
 	c.newline()
 }
