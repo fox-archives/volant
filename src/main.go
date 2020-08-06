@@ -15,15 +15,16 @@ func main() {
 	var lexer = parser.Lexer{
 		Buffer: dat,
 	}
-
 	var p = parser.Parser{
 		Lexer: &lexer,
+		Forks: map[byte]int{},
 	}
-
 	var c = compiler.Compiler{
 		ScopeCount: 0,
-		Buff:       []byte("#include <stdio.h>\n#include <stdlib.h>\n"),
+		Buff:       []byte(""),
 	}
+
+	c.Buff, _ = ioutil.ReadFile("deafult.c")
 
 	for p.ReadToken().PrimaryType != parser.EOF {
 		c.Statement(p.ParseGlobalStatement())

@@ -39,12 +39,28 @@ func (c *Compiler) closeParen() {
 	c.append([]byte(")"))
 }
 
-func (c *Compiler) openBrace() {
+func (c *Compiler) openCurlyBrace() {
 	c.append([]byte("{"))
 }
 
-func (c *Compiler) closeBrace() {
+func (c *Compiler) closeCurlyBrace() {
 	c.append([]byte("}"))
+}
+
+func (c *Compiler) openBrace() {
+	c.append([]byte("["))
+}
+
+func (c *Compiler) closeBrace() {
+	c.append([]byte("]"))
+}
+
+func (c *Compiler) dot() {
+	c.append([]byte("."))
+}
+
+func (c *Compiler) equal() {
+	c.append([]byte("="))
 }
 
 func (c *Compiler) pushScope() {
@@ -97,7 +113,7 @@ func (c *Compiler) loop(loop Loop) {
 
 	if loop.Type&InitLoop == InitLoop {
 		c.indent()
-		c.openBrace()
+		c.openCurlyBrace()
 		c.pushScope()
 		c.Statement(loop.InitStatement)
 	}
@@ -124,13 +140,13 @@ func (c *Compiler) loop(loop Loop) {
 		c.popScope()
 		c.newline()
 		c.indent()
-		c.closeBrace()
+		c.closeCurlyBrace()
 	}
 }
 
 func (c *Compiler) declaration(dec Declaration) {
 	hasValues := len(dec.Values) > 0
-	//print(dec.Values[0].(BasicLit).Value.Buff)
+
 	switch len(dec.Types) {
 	case 0:
 	case 1:
@@ -144,7 +160,9 @@ func (c *Compiler) declaration(dec Declaration) {
 				c.append([]byte(" "))
 				c.append(Var.Buff)
 				if hasValues {
-					c.append([]byte(" = "))
+					c.space()
+					c.equal()
+					c.space()
 					c.expression(dec.Values[i])
 				}
 				c.semicolon()
@@ -166,39 +184,42 @@ func (c *Compiler) declaration(dec Declaration) {
 				c.block(dec.Values[i].(FunctionExpression).Block)
 			}
 		}
-	default:
-		for i, Var := range dec.Identifiers {
-			Type := dec.Types[i]
+		return
+	}
 
-			switch Type.Type {
-			case IdentifierType:
-				c.indent()
-				c.basicTypeNoArray(Type)
+	for i, Var := range dec.Identifiers {
+		Type := dec.Types[i]
+
+		switch Type.Type {
+		case IdentifierType:
+			c.indent()
+			c.basicTypeNoArray(Type)
+			c.space()
+			c.append(Var.Buff)
+
+			if hasValues {
 				c.space()
-				c.append(Var.Buff)
-
-				if hasValues {
-					c.append([]byte(" = "))
-					c.expression(dec.Values[i])
-				}
-
-				c.semicolon()
-				c.newline()
-
-			case FuncType:
-				c.indent()
-				c.append(dec.Values[i].(FunctionExpression).ReturnTypes[0].Identifier.Buff)
+				c.equal()
 				c.space()
-				c.append(Var.Buff)
-				c.openParen()
-
-				for _, Arg := range dec.Values[i].(FunctionExpression).Args {
-					c.arg(Arg)
-				}
-
-				c.closeParen()
-				c.block(dec.Values[i].(FunctionExpression).Block)
+				c.expression(dec.Values[i])
 			}
+
+			c.semicolon()
+			c.newline()
+
+		case FuncType:
+			c.indent()
+			c.append(dec.Values[i].(FunctionExpression).ReturnTypes[0].Identifier.Buff)
+			c.space()
+			c.append(Var.Buff)
+			c.openParen()
+
+			for _, Arg := range dec.Values[i].(FunctionExpression).Args {
+				c.arg(Arg)
+			}
+
+			c.closeParen()
+			c.block(dec.Values[i].(FunctionExpression).Block)
 		}
 	}
 }
@@ -224,7 +245,7 @@ func (c *Compiler) arg(arg ArgStruct) {
 }
 
 func (c *Compiler) block(block Block) {
-	c.openBrace()
+	c.openCurlyBrace()
 	c.pushScope()
 	for _, statement := range block.Statements {
 		c.Statement(statement)
@@ -232,7 +253,7 @@ func (c *Compiler) block(block Block) {
 	c.popScope()
 	c.newline()
 	c.indent()
-	c.closeBrace()
+	c.closeCurlyBrace()
 }
 
 func (c *Compiler) expression(expr Expression) {
@@ -245,12 +266,11 @@ func (c *Compiler) expression(expr Expression) {
 	case IdentExpr:
 		c.append(expr.(IdentExpr).Value.Buff)
 	case BinaryExpr:
-
 		switch expr.(BinaryExpr).Left.(type) {
 		case BasicLit:
 			c.expression(expr.(BinaryExpr).Left)
 		case IdentExpr:
-			c.expression(expr.(BinaryExpr).Right)
+			c.expression(expr.(BinaryExpr).Left)
 		default:
 			c.openParen()
 			c.expression(expr.(BinaryExpr).Left)
@@ -282,10 +302,71 @@ func (c *Compiler) expression(expr Expression) {
 			c.expression(expr.(UnaryExpr).Expr)
 			c.closeParen()
 		}
+	case PostfixUnaryExpr:
+		switch expr.(PostfixUnaryExpr).Expr.(type) {
+		case BasicLit:
+			c.expression(expr.(PostfixUnaryExpr).Expr)
+		case IdentExpr:
+			c.expression(expr.(PostfixUnaryExpr).Expr)
+		default:
+			c.openParen()
+			c.expression(expr.(PostfixUnaryExpr).Expr)
+			c.closeParen()
+		}
+		c.operator(expr.(PostfixUnaryExpr).Op)
+	case ArrayMemberExpr:
+		switch expr.(ArrayMemberExpr).Parent.(type) {
+		case MemberExpr:
+			c.expression(expr.(ArrayMemberExpr).Parent)
+		case IdentExpr:
+			c.expression(expr.(ArrayMemberExpr).Parent)
+		default:
+			c.openParen()
+			c.expression(expr.(ArrayMemberExpr).Parent)
+			c.closeParen()
+		}
+		c.openBrace()
+		c.expression(expr.(ArrayMemberExpr).Index)
+		c.closeBrace()
 	case MemberExpr:
-		c.append(expr.(MemberExpr).Base.Buff)
+		c.expression(expr.(MemberExpr).Base)
 		c.append([]byte("."))
 		c.expression(expr.(MemberExpr).Expr)
+	case TernaryExpr:
+		c.expression(expr.(TernaryExpr).Cond)
+		c.space()
+		c.append([]byte("?"))
+		c.space()
+		c.expression(expr.(TernaryExpr).Left)
+		c.space()
+		c.colon()
+		c.space()
+		c.expression(expr.(TernaryExpr).Right)
+	case CompoundLiteral:
+		c.openParen()
+		c.expression(expr.(CompoundLiteral).Name)
+		c.closeParen()
+
+		c.openCurlyBrace()
+		if len(expr.(CompoundLiteral).Data.Fields) > 0 {
+			for i, field := range expr.(CompoundLiteral).Data.Fields {
+				c.dot()
+				c.append(field.Buff)
+				c.space()
+				c.equal()
+				c.space()
+				c.expression(expr.(CompoundLiteral).Data.Values[i])
+				c.comma()
+				c.space()
+			}
+		} else if len(expr.(CompoundLiteral).Data.Values) > 0 {
+			for _, val := range expr.(CompoundLiteral).Data.Values {
+				c.expression(val)
+				c.comma()
+				c.space()
+			}
+		}
+		c.closeCurlyBrace()
 	}
 }
 
@@ -321,7 +402,7 @@ func (c *Compiler) ifElse(ifElse IfElseBlock) {
 
 	if ifElse.HasInitStmt {
 		c.indent()
-		c.openBrace()
+		c.openCurlyBrace()
 		c.pushScope()
 		c.Statement(ifElse.InitStatement)
 	}
@@ -342,7 +423,7 @@ func (c *Compiler) ifElse(ifElse IfElseBlock) {
 		c.popScope()
 		c.newline()
 		c.indent()
-		c.closeBrace()
+		c.closeCurlyBrace()
 	}
 }
 
@@ -352,18 +433,18 @@ func (c *Compiler) assignment(as Assignment) {
 		c.indent()
 		c.expression(Var)
 
-		if as.Op.SecondaryType != AddAdd && as.Op.SecondaryType != SubSub {
-			c.space()
-			c.operator(as.Op)
-			c.space()
-			if len(as.Values) > 1 {
-				c.expression(as.Values[i])
-			} else {
-				c.expression(as.Values[0])
-			}
+		//if as.Op.SecondaryType != AddAdd && as.Op.SecondaryType != SubSub {
+		c.space()
+		c.operator(as.Op)
+		c.space()
+		if len(as.Values) > 1 {
+			c.expression(as.Values[i])
 		} else {
-			c.operator(as.Op)
+			c.expression(as.Values[0])
 		}
+		//} else {
+		//	c.operator(as.Op)
+		//}
 
 		c.semicolon()
 		c.newline()
@@ -373,7 +454,7 @@ func (c *Compiler) assignment(as Assignment) {
 func (c *Compiler) swtch(swtch Switch) {
 	if swtch.Type == InitCondSwitch {
 		c.indent()
-		c.openBrace()
+		c.openCurlyBrace()
 		c.pushScope()
 		c.Statement(swtch.InitStatement)
 	}
@@ -388,7 +469,7 @@ func (c *Compiler) swtch(swtch Switch) {
 		c.expression(swtch.Condition)
 	}
 	c.closeParen()
-	c.openBrace()
+	c.openCurlyBrace()
 
 	for _, Case := range swtch.Cases {
 		c.newline()
@@ -420,13 +501,13 @@ func (c *Compiler) swtch(swtch Switch) {
 
 	c.newline()
 	c.indent()
-	c.closeBrace()
+	c.closeCurlyBrace()
 
 	if swtch.Type == InitCondSwitch {
 		c.popScope()
 		c.newline()
 		c.indent()
-		c.closeBrace()
+		c.closeCurlyBrace()
 	}
 }
 
@@ -444,7 +525,7 @@ func (c *Compiler) structTypedef(st Struct) {
 	}
 
 	c.popScope()
-	c.closeBrace()
+	c.closeCurlyBrace()
 	c.space()
 	c.append(st.Identifier.Buff)
 	c.semicolon()

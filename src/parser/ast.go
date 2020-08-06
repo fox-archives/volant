@@ -218,8 +218,23 @@ type (
 	}
 
 	MemberExpr struct {
-		Base Token
+		Base Expression
 		Expr Expression
+	}
+
+	ArrayMemberExpr struct {
+		Parent Expression
+		Index  Expression
+	}
+
+	CompoundLiteral struct {
+		Name Expression
+		Data CompoundLiteralData
+	}
+
+	CompoundLiteralData struct {
+		Fields []Token
+		Values []Expression
 	}
 )
 
@@ -238,28 +253,34 @@ func (NullStatement) isStatement() {}
 func (Break) isStatement()         {}
 func (Continue) isStatement()      {}
 
-func (BasicLit) isExpression()           {}
-func (BinaryExpr) isExpression()         {}
-func (UnaryExpr) isExpression()          {}
-func (ArrExpr) isExpression()            {}
-func (CallExpr) isExpression()           {}
-func (ParenExpr) isExpression()          {}
-func (FunctionExpression) isExpression() {}
-func (TernaryExpr) isExpression()        {}
-func (PostfixUnaryExpr) isExpression()   {}
-func (TypeCast) isExpression()           {}
-func (IdentExpr) isExpression()          {}
-func (MemberExpr) isExpression()         {}
+func (BasicLit) isExpression()            {}
+func (BinaryExpr) isExpression()          {}
+func (UnaryExpr) isExpression()           {}
+func (ArrExpr) isExpression()             {}
+func (CallExpr) isExpression()            {}
+func (ParenExpr) isExpression()           {}
+func (FunctionExpression) isExpression()  {}
+func (TernaryExpr) isExpression()         {}
+func (PostfixUnaryExpr) isExpression()    {}
+func (TypeCast) isExpression()            {}
+func (IdentExpr) isExpression()           {}
+func (MemberExpr) isExpression()          {}
+func (ArrayMemberExpr) isExpression()     {}
+func (CompoundLiteral) isExpression()     {}
+func (CompoundLiteralData) isExpression() {}
 
-func (BasicLit) isStatement()           {}
-func (BinaryExpr) isStatement()         {}
-func (UnaryExpr) isStatement()          {}
-func (ArrExpr) isStatement()            {}
-func (CallExpr) isStatement()           {}
-func (ParenExpr) isStatement()          {}
-func (FunctionExpression) isStatement() {}
-func (TernaryExpr) isStatement()        {}
-func (PostfixUnaryExpr) isStatement()   {}
-func (TypeCast) isStatement()           {}
-func (IdentExpr) isStatement()          {}
-func (MemberExpr) isStatement()         {}
+func (BasicLit) isStatement()            {}
+func (BinaryExpr) isStatement()          {}
+func (UnaryExpr) isStatement()           {}
+func (ArrExpr) isStatement()             {}
+func (CallExpr) isStatement()            {}
+func (ParenExpr) isStatement()           {}
+func (FunctionExpression) isStatement()  {}
+func (TernaryExpr) isStatement()         {}
+func (PostfixUnaryExpr) isStatement()    {}
+func (TypeCast) isStatement()            {}
+func (IdentExpr) isStatement()           {}
+func (MemberExpr) isStatement()          {}
+func (ArrayMemberExpr) isStatement()     {}
+func (CompoundLiteral) isStatement()     {}
+func (CompoundLiteralData) isStatement() {}

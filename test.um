@@ -1,34 +1,49 @@
+struct Kaka {
+    a, b: int;
+};
 
 main: func() int = func() int {
-    str, num: *char, int = "hehehehe", 100+ 20 + 100+(10+10);
+    str, num: *char, int = "hehehehe", (10+10)*10;
 
     mem: *char = malloc(sizeof(char)*10);
+    
+    p: Kaka = (Kaka){a: 0, b: 0};
 
-    printf("Exter something: ");
+    printf("p.a is %i and p.b is %i.\n", p.a, p.b);
+
+    printf("Enter something: ");
     scanf("%s", mem);
-    printf("You entered %s.\nRandom stuff below...\n", mem);
+
+    printf("First letter of what you entered is %c.\n", mem[0]);
+    printf("Second letter of what you entered is %c.\n", *(mem+1));
+    printf("You entered %s.\n\nRandom stuff below...\n", mem);
 
     free(mem);
 
     if x: int = 0; num {
         printf("str is \"%s\" and num is %i.\n", str, num);
-    } else if x {
-        printf("hehe x is not xero.\n");
-    } else {
-        printf("hehe x is zero.\n");
+        x ? printf("hehe x is not xero.\n\n") : printf("hehe x is zero.\n\n");
     }
     
-    for i: int = 10; i; --i {
+    for i: int = 10; i; i-- {
         printf("i is %i and num is %i\n", i, num);
     }
 
     switch p: int = 0; num {
     case 90:
-        printf("num is 90.\n");
+        printf("num is 90. p is %i.\n", p);
         break;
     default:
-        printf("num is not 90.\n");
+        printf("num is not 90. p is %i.\n", p);
     }
 
+    printf("\nhaha eternal heap allocater goes brr..\n")
+
+    for i: long = 0;; ++i {
+        malloc(sizeof(char)*100);
+        if i % 10000 == 0 {
+            printf("\rallocated %li bytes", i*10000);
+        }
+    }
     return 0;
 };
