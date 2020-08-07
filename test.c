@@ -46,6 +46,10 @@ __mem_block input(__mem_block str){
 	return str;
 }
 int main(){
+	int (^function)() = ^int(){
+		return 0;
+	};
+	printf("function() returned %i\n", function());
 	char* str = "hehehehe";
 	int num = (10+10)*10;
 
@@ -72,9 +76,6 @@ int main(){
 		} else {
 		}
 	}
-	defer {
-		printf("haha I wont be printed cuz the function already returned.\n");
-	};
 	__mem_block* a = &(new(char));
 
 	__mem_block m = new(int);

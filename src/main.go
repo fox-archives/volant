@@ -28,7 +28,7 @@ func main() {
 	c.Buff, _ = ioutil.ReadFile("default.c")
 
 	for p.ReadToken().PrimaryType != parser.EOF {
-		c.Statement(n.GlobalStatement(p.ParseGlobalStatement()))
+		c.GlobalStatement(n.GlobalStatement(p.ParseGlobalStatement()))
 	}
 
 	fmt.Println(string(c.Buff))

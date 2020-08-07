@@ -21,6 +21,13 @@ input: func() int = func(str: __mem_block) __mem_block {
 } 
 
 main: func() int = func() int {
+
+    function: func () int = func () int {
+        return 0;
+    }
+    
+    printf("function() returned %i\n", function());
+    
     str, num: *char, int = "hehehehe", (10+10)*10
     
     defer printf("Haha I'll be printed on the last\n")

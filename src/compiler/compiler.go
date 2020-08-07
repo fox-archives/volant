@@ -88,11 +88,29 @@ func (c *Compiler) indent() {
 	}
 }
 
-func (c *Compiler) Statement(stmt Statement) {
+func (c *Compiler) GlobalStatement(stmt Statement) {
 	c.newline()
 	switch stmt.(type) {
 	case Declaration:
-		c.declaration(stmt.(Declaration))
+		c.declaration(stmt.(Declaration), true)
+	case Switch:
+		c.swtch(stmt.(Switch))
+	case Struct:
+		c.structTypedef(stmt.(Struct))
+	case Enum:
+		c.enumTypedef(stmt.(Enum))
+	case Tuple:
+		c.tupleTypedef(stmt.(Tuple))
+	case NullStatement:
+		c.semicolon()
+	}
+}
+
+func (c *Compiler) statement(stmt Statement) {
+	c.newline()
+	switch stmt.(type) {
+	case Declaration:
+		c.declaration(stmt.(Declaration), false)
 	case Return:
 		c.rturn(stmt.(Return))
 	case IfElseBlock:
@@ -135,7 +153,7 @@ func (c *Compiler) defr(defr Defer) {
 	c.space()
 	c.openCurlyBrace()
 	c.pushScope()
-	c.Statement(defr.Stmt)
+	c.statement(defr.Stmt)
 	c.newline()
 	c.popScope()
 	c.indent()
@@ -149,7 +167,7 @@ func (c *Compiler) loop(loop Loop) {
 		c.indent()
 		c.openCurlyBrace()
 		c.pushScope()
-		c.Statement(loop.InitStatement)
+		c.statement(loop.InitStatement)
 	}
 
 	c.indent()
@@ -178,7 +196,7 @@ func (c *Compiler) loop(loop Loop) {
 	}
 }
 
-func (c *Compiler) declaration(dec Declaration) {
+func (c *Compiler) declaration(dec Declaration, global bool) {
 	hasValues := len(dec.Values) > 0
 
 	for i, Var := range dec.Identifiers {
@@ -202,31 +220,82 @@ func (c *Compiler) declaration(dec Declaration) {
 			c.newline()
 
 		case FuncType:
-			Func := dec.Values[i].(FunctionExpression)
+			if global {
+				Func := dec.Values[i].(FunctionExpression)
 
-			c.indent()
-			c.identifier(Func.ReturnTypes[0].Identifier)
-			c.space()
-			c.append(Var.Buff)
-			c.openParen()
-
-			args := Func.Args
-
-			if len(args) > 0 {
-				c.basicTypeNoArray(args[0].Type)
+				c.indent()
+				c.identifier(Func.ReturnTypes[0].Identifier)
 				c.space()
-				c.identifier(args[0].Identifier)
+				c.append(Var.Buff)
+				c.openParen()
 
-				for i := 1; i < len(args); i++ {
-					c.comma()
+				args := Func.Args
+
+				if len(args) > 0 {
+					c.basicTypeNoArray(args[0].Type)
 					c.space()
-					c.basicTypeNoArray(args[i].Type)
-					c.space()
-					c.identifier(args[i].Identifier)
+					c.identifier(args[0].Identifier)
+
+					for i := 1; i < len(args); i++ {
+						c.comma()
+						c.space()
+						c.basicTypeNoArray(args[i].Type)
+						c.space()
+						c.identifier(args[i].Identifier)
+					}
 				}
+				c.closeParen()
+				c.block(Func.Block)
+			} else {
+
+				Func := dec.Values[i].(FunctionExpression)
+
+				c.indent()
+				c.identifier(Func.ReturnTypes[0].Identifier)
+				c.space()
+				c.openParen()
+				c.append([]byte("^"))
+				c.identifier(Var)
+				c.closeParen()
+				c.openParen()
+
+				args := Func.Args
+
+				if len(args) > 0 {
+					c.basicTypeNoArray(args[0].Type)
+
+					for i := 1; i < len(args); i++ {
+						c.comma()
+						c.space()
+						c.basicTypeNoArray(args[i].Type)
+					}
+				}
+				c.closeParen()
+				c.space()
+				c.equal()
+				c.space()
+				c.append([]byte("^"))
+				c.identifier(Func.ReturnTypes[0].Identifier)
+
+				c.openParen()
+
+				if len(args) > 0 {
+					c.basicTypeNoArray(args[0].Type)
+					c.space()
+					c.identifier(args[0].Identifier)
+
+					for i := 1; i < len(args); i++ {
+						c.comma()
+						c.space()
+						c.basicTypeNoArray(args[i].Type)
+						c.space()
+						c.identifier(args[i].Identifier)
+					}
+				}
+				c.closeParen()
+				c.block(Func.Block)
+				c.semicolon()
 			}
-			c.closeParen()
-			c.block(Func.Block)
 		}
 	}
 }
@@ -247,7 +316,7 @@ func (c *Compiler) block(block Block) {
 	c.openCurlyBrace()
 	c.pushScope()
 	for _, statement := range block.Statements {
-		c.Statement(statement)
+		c.statement(statement)
 	}
 	c.popScope()
 	c.newline()
@@ -406,7 +475,7 @@ func (c *Compiler) ifElse(ifElse IfElseBlock) {
 		c.indent()
 		c.openCurlyBrace()
 		c.pushScope()
-		c.Statement(ifElse.InitStatement)
+		c.statement(ifElse.InitStatement)
 	}
 
 	c.indent()
@@ -458,7 +527,7 @@ func (c *Compiler) swtch(swtch Switch) {
 		c.indent()
 		c.openCurlyBrace()
 		c.pushScope()
-		c.Statement(swtch.InitStatement)
+		c.statement(swtch.InitStatement)
 	}
 
 	c.indent()
@@ -483,7 +552,7 @@ func (c *Compiler) swtch(swtch Switch) {
 
 		c.pushScope()
 		for _, stmt := range Case.Block.Statements {
-			c.Statement(stmt)
+			c.statement(stmt)
 		}
 		c.popScope()
 	}
@@ -496,7 +565,7 @@ func (c *Compiler) swtch(swtch Switch) {
 
 		c.pushScope()
 		for _, stmt := range swtch.DefaultCase.Statements {
-			c.Statement(stmt)
+			c.statement(stmt)
 		}
 		c.popScope()
 	}
@@ -519,7 +588,7 @@ func (c *Compiler) structTypedef(st Struct) {
 	c.pushScope()
 
 	for _, prop := range st.Props {
-		c.declaration(prop)
+		c.declaration(prop, false)
 	}
 
 	c.popScope()
