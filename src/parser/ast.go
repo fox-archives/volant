@@ -27,54 +27,9 @@ const (
 	NoneSwtch      SwitchType = 3
 )
 
-type BasicType byte
-
-const (
-	U8Type  BasicType = 1
-	U16Type BasicType = 2
-	U32Type BasicType = 3
-	U64Type BasicType = 4
-	I8Type  BasicType = 5
-	I16Type BasicType = 6
-	I32Type BasicType = 7
-	I64Type BasicType = 8
-)
-
-var BasicTypeDebug = map[BasicType]string{
-	U8Type:  "U8Type",
-	U16Type: "U16Type",
-	U32Type: "U32Type",
-	U64Type: "U64Type",
-	I8Type:  "I8Type",
-	I16Type: "I16Type",
-	I32Type: "I32Type",
-	I64Type: "I64Type",
-}
-
-type TypeType byte
-
-const (
-	IdentifierType TypeType = 1
-	FuncType       TypeType = 2
-	StructType     TypeType = 3
-	TupleType      TypeType = 4
-)
-
-type StructPropStruct struct {
-	Identifier Token
-	Type       Type
-	Value      Expression
-}
-
-type FunctionTypeStruct struct {
-	Type        FunctionType
-	Args        []Type
-	ReturnTypes []Type
-}
-
 type ArgStruct struct {
 	Identifier Token
-	Type       Type
+	Type       Expression
 }
 
 type CaseStruct struct {
@@ -91,13 +46,19 @@ type Expression interface {
 	isStatement()
 }
 
+type Type interface {
+	isType()
+	isExpression()
+	isStatement()
+}
+
 type (
 	Block struct {
 		Statements []Statement
 	}
 	Declaration struct {
 		Identifiers []Token
-		Types       []Type
+		Types       []Expression
 		Values      []Expression
 	}
 	Import struct {
@@ -133,18 +94,17 @@ type (
 		Op        Token
 		Values    []Expression
 	}
-	Enum struct {
-		Name        Token
-		Identifiers []Token
-		Values      []Expression
+	EnumTypedef struct {
+		Name Token
+		Type EnumType
 	}
-	Tuple struct {
+	TupleTypedef struct {
 		Identifier Token
-		Types      []Type
+		Type       TupleType
 	}
-	Struct struct {
+	StructTypedef struct {
 		Identifier Token
-		Props      []Declaration
+		Type       StructType
 	}
 	Defer struct {
 		Stmt Statement
@@ -189,10 +149,10 @@ type (
 		Expr Expression
 	}
 
-	FunctionExpression struct {
+	FuncExpr struct {
 		Type        FunctionType
 		Args        []ArgStruct
-		ReturnTypes []Type
+		ReturnTypes []Expression
 		Block       Block
 	}
 
@@ -231,17 +191,38 @@ type (
 	}
 
 	HeapAlloc struct {
-		Type Type
+		Type Expression
+	}
+)
+
+type (
+	FuncType struct {
+		Type        FunctionType
+		Args        []Expression
+		ReturnTypes []Expression
 	}
 
-	Type struct {
-		Type         TypeType
-		PointerIndex byte
+	StructType struct {
+		Props []Declaration
+	}
 
-		Identifier Token
-		FuncType   FunctionTypeStruct
-		StructType Struct
-		TupleType  Tuple
+	TupleType struct {
+		Types []Expression
+	}
+
+	EnumType struct {
+		Identifiers []Token
+		Values      []Expression
+	}
+
+	BasicType struct {
+		Expr Expression
+	}
+
+	TypeStruct struct {
+		PointerIndex byte
+		Base         Expression
+		IsDynamic    byte
 	}
 )
 
@@ -253,9 +234,9 @@ func (Switch) isStatement()        {}
 func (IfElseBlock) isStatement()   {}
 func (Return) isStatement()        {}
 func (Assignment) isStatement()    {}
-func (Enum) isStatement()          {}
-func (Tuple) isStatement()         {}
-func (Struct) isStatement()        {}
+func (EnumTypedef) isStatement()   {}
+func (TupleTypedef) isStatement()  {}
+func (StructTypedef) isStatement() {}
 func (NullStatement) isStatement() {}
 func (Break) isStatement()         {}
 func (Continue) isStatement()      {}
@@ -267,7 +248,7 @@ func (UnaryExpr) isExpression()           {}
 func (ArrExpr) isExpression()             {}
 func (CallExpr) isExpression()            {}
 func (ParenExpr) isExpression()           {}
-func (FunctionExpression) isExpression()  {}
+func (FuncExpr) isExpression()            {}
 func (TernaryExpr) isExpression()         {}
 func (PostfixUnaryExpr) isExpression()    {}
 func (TypeCast) isExpression()            {}
@@ -277,7 +258,6 @@ func (ArrayMemberExpr) isExpression()     {}
 func (CompoundLiteral) isExpression()     {}
 func (CompoundLiteralData) isExpression() {}
 func (HeapAlloc) isExpression()           {}
-func (Type) isExpression()                {}
 
 func (BasicLit) isStatement()            {}
 func (BinaryExpr) isStatement()          {}
@@ -285,7 +265,7 @@ func (UnaryExpr) isStatement()           {}
 func (ArrExpr) isStatement()             {}
 func (CallExpr) isStatement()            {}
 func (ParenExpr) isStatement()           {}
-func (FunctionExpression) isStatement()  {}
+func (FuncExpr) isStatement()            {}
 func (TernaryExpr) isStatement()         {}
 func (PostfixUnaryExpr) isStatement()    {}
 func (TypeCast) isStatement()            {}
@@ -295,4 +275,24 @@ func (ArrayMemberExpr) isStatement()     {}
 func (CompoundLiteral) isStatement()     {}
 func (CompoundLiteralData) isStatement() {}
 func (HeapAlloc) isStatement()           {}
-func (Type) isStatement()                {}
+
+func (BasicType) isType()  {}
+func (StructType) isType() {}
+func (EnumType) isType()   {}
+func (TupleType) isType()  {}
+func (TypeStruct) isType() {}
+func (FuncType) isType()   {}
+
+func (BasicType) isExpression()  {}
+func (StructType) isExpression() {}
+func (EnumType) isExpression()   {}
+func (TupleType) isExpression()  {}
+func (TypeStruct) isExpression() {}
+func (FuncType) isExpression()   {}
+
+func (BasicType) isStatement()  {}
+func (StructType) isStatement() {}
+func (EnumType) isStatement()   {}
+func (TupleType) isStatement()  {}
+func (TypeStruct) isStatement() {}
+func (FuncType) isStatement()   {}

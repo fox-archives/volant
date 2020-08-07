@@ -48,7 +48,7 @@ __mem_block input(__mem_block str){
 int main(){
 	int (^function)() = ^int(){
 		return 0;
-	};
+	};;
 	printf("function() returned %i\n", function());
 	char* str = "hehehehe";
 	int num = (10+10)*10;
@@ -56,26 +56,6 @@ int main(){
 	defer {
 		printf("Haha I'll be printed on the last\n");
 	};
-	{
-		defer {
-			printf("haha I am in a nested block.\n");
-		};
-		if(1){
-			defer {
-				printf("haha I am in a if block nested inside a nested block.\n");
-			};
-			{
-				int i = 0;
-				while(i<2){
-					defer {
-						printf("haha I am in a loop nested inside a if block nested inside a nested block.\n");
-					};
-					++i;
-				}
-			}
-		} else {
-		}
-	}
 	__mem_block* a = &(new(char));
 
 	__mem_block m = new(int);
