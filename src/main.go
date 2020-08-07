@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	dat, _ := ioutil.ReadFile("test.um")
+	dat, _ := ioutil.ReadFile("test.vo")
 
 	var lexer = parser.Lexer{
 		Buffer: dat,
@@ -19,15 +19,16 @@ func main() {
 		Lexer: &lexer,
 		Forks: map[byte]int{},
 	}
+	var n = compiler.Normalizer{}
 	var c = compiler.Compiler{
 		ScopeCount: 0,
 		Buff:       []byte(""),
 	}
 
-	c.Buff, _ = ioutil.ReadFile("deafult.c")
+	c.Buff, _ = ioutil.ReadFile("default.c")
 
 	for p.ReadToken().PrimaryType != parser.EOF {
-		c.Statement(p.ParseGlobalStatement())
+		c.Statement(n.GlobalStatement(p.ParseGlobalStatement()))
 	}
 
 	fmt.Println(string(c.Buff))

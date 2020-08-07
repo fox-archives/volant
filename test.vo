@@ -1,0 +1,102 @@
+struct Kaka {
+    a, b: int
+}
+
+enum Kakak {
+    a = 0,
+    b,
+    c,
+    d
+}
+
+tuple Kakakak {char, int}
+
+function: func() int = func () int {
+    return 100
+}
+
+input: func() int = func(str: __mem_block) __mem_block {
+    scanf("%s", str._ptr);
+    return str;
+} 
+
+main: func() int = func() int {
+    str, num: *char, int = "hehehehe", (10+10)*10
+    
+    defer printf("Haha I'll be printed on the last\n")
+    
+    {
+        defer printf("haha I am in a nested block.\n")
+        
+        if 1 {
+            defer printf("haha I am in a if block nested inside a nested block.\n")
+            
+            for i: int = 0; i < 2; ++i {
+                defer printf("haha I am in a loop nested inside a if block nested inside a nested block.\n")
+                /*
+                switch {
+                default:
+                    defer printf("haha I am in a switch statement inside a loop nested inside a if block nested inside a nested block.\n")
+                }
+                */
+            }
+
+        }
+    }
+
+    a: *__mem_block = &(new char)
+    m: __mem_block = new int
+    
+    cast(m._ptr, intptr)[0] = 0
+
+    printf("size is %li.\n", size);
+    printf("m is %i.\nLength of m is %li\n", *cast(m._ptr, intptr), len(m))
+    printf("function() returned %i.\n", function())
+
+    
+    p: Kaka = (Kaka){a: 0, b: 0}
+    q: Kakakak = (Kakakak){0, 0}
+
+    printf("p.a is %i and p.b is %i.\n", p.a, p.b)
+    printf("q[0] is %i and q[1] is %i.\n\n", q._0, q._1)
+    
+    mem: *char = malloc(sizeof(char)*10)
+
+    printf("Enter something: ")
+    scanf("%s", mem)
+
+    printf("First letter of what you entered is %c.\n", mem[0])
+    printf("Second letter of what you entered is %c.\n", (mem+1)[0])
+    printf("You entered %s.\n\nRandom stuff below...\n", mem)
+
+    free(mem)
+
+    if x: int = 0; num {
+        printf("str is \"%s\" and num is %i.\n", str, num)
+        x ? printf("hehe x is not xero.\n\n") : printf("hehe x is zero.\n\n")
+    }
+    
+    for i: int = 10; i; i-- {
+        printf("i is %i and num is %i\n", i, num)
+    }
+
+    switch p: int = 0; num {
+    case 90:
+        printf("num is 90. p is %i.\n", cast(p, int))
+        break
+    default:
+        printf("num is not 90. p is %i.\n", p)
+    }
+
+    /*
+    printf("\nhaha eternal heap allocater goes brr..\n")
+    
+    for i: long = 0;; ++i {
+        new char
+        if i % 10000 == 0 {
+            printf("\rallocated %li bytes", i)
+        }
+    }
+    */
+    return 0
+}

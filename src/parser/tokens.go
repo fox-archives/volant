@@ -1,5 +1,7 @@
 package parser
 
+import "strconv"
+
 // PrimaryTokenType enum
 type PrimaryTokenType byte
 
@@ -57,6 +59,7 @@ const (
 	DefaultKeyword  PrimaryTokenType = 116
 	BreakKeyword    PrimaryTokenType = 117
 	ContinueKeyword PrimaryTokenType = 118
+	NewKeyword      PrimaryTokenType = 119
 
 	// the parser stops parsing when it receives either of these types and shows the correct error message
 	EOF        PrimaryTokenType = 254
@@ -150,6 +153,7 @@ var Keywords = map[string]PrimaryTokenType{
 	"break":    BreakKeyword,
 	"continue": ContinueKeyword,
 	"tuple":    TupleKeyword,
+	"new":      NewKeyword,
 	// more stuff
 }
 
@@ -274,5 +278,5 @@ var SecondaryTypes map[SecondaryTokenType]string = map[SecondaryTokenType]string
 
 // Serialize serializes a token
 func (token *Token) Serialize() string {
-	return "{\n\tPrimaryType:\t" + PrimaryTypes[token.PrimaryType] + ",\n\tSecondaryType:\t" + SecondaryTypes[token.SecondaryType] + ",\n\tValue:\t" + string(token.Buff) + "\n},"
+	return "{\n\tPrimaryType:\t" + PrimaryTypes[token.PrimaryType] + ",\n\tSecondaryType:\t" + SecondaryTypes[token.SecondaryType] + ",\n\tValue:\t" + string(token.Buff) + "\n\tLine:\t" + strconv.Itoa(token.Line) + "\n\tColumn:\t" + strconv.Itoa(token.Column) + "\n},"
 }

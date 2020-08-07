@@ -60,36 +60,26 @@ const (
 	TupleType      TypeType = 4
 )
 
-type TypeStruct struct {
-	Type         TypeType
-	PointerIndex byte
-
-	Identifier Token
-	FuncType   FunctionTypeStruct
-	StructType Struct
-	TupleType  Tuple
-}
-
 type StructPropStruct struct {
 	Identifier Token
-	Type       TypeStruct
+	Type       Type
 	Value      Expression
 }
 
 type FunctionTypeStruct struct {
 	Type        FunctionType
-	Args        []TypeStruct
-	ReturnTypes []TypeStruct
+	Args        []Type
+	ReturnTypes []Type
 }
 
 type ArgStruct struct {
 	Identifier Token
-	Type       TypeStruct
+	Type       Type
 }
 
 type CaseStruct struct {
-	Condition  Expression
-	Statements []Statement
+	Condition Expression
+	Block     Block
 }
 
 type Statement interface {
@@ -107,7 +97,7 @@ type (
 	}
 	Declaration struct {
 		Identifiers []Token
-		Types       []TypeStruct
+		Types       []Type
 		Values      []Expression
 	}
 	Import struct {
@@ -123,7 +113,7 @@ type (
 	Switch struct {
 		Type           SwitchType
 		InitStatement  Statement
-		Condition      Expression
+		Expr           Expression
 		Cases          []CaseStruct
 		HasDefaultCase bool
 		DefaultCase    Block
@@ -150,11 +140,14 @@ type (
 	}
 	Tuple struct {
 		Identifier Token
-		Types      []TypeStruct
+		Types      []Type
 	}
 	Struct struct {
 		Identifier Token
 		Props      []Declaration
+	}
+	Defer struct {
+		Stmt Statement
 	}
 	Break         struct{}
 	Continue      struct{}
@@ -199,7 +192,7 @@ type (
 	FunctionExpression struct {
 		Type        FunctionType
 		Args        []ArgStruct
-		ReturnTypes []TypeStruct
+		ReturnTypes []Type
 		Block       Block
 	}
 
@@ -209,7 +202,7 @@ type (
 	}
 
 	TypeCast struct {
-		Type TypeStruct
+		Type Expression
 		Expr Expression
 	}
 
@@ -236,6 +229,20 @@ type (
 		Fields []Token
 		Values []Expression
 	}
+
+	HeapAlloc struct {
+		Type Type
+	}
+
+	Type struct {
+		Type         TypeType
+		PointerIndex byte
+
+		Identifier Token
+		FuncType   FunctionTypeStruct
+		StructType Struct
+		TupleType  Tuple
+	}
 )
 
 func (Block) isStatement()         {}
@@ -252,6 +259,7 @@ func (Struct) isStatement()        {}
 func (NullStatement) isStatement() {}
 func (Break) isStatement()         {}
 func (Continue) isStatement()      {}
+func (Defer) isStatement()         {}
 
 func (BasicLit) isExpression()            {}
 func (BinaryExpr) isExpression()          {}
@@ -268,6 +276,8 @@ func (MemberExpr) isExpression()          {}
 func (ArrayMemberExpr) isExpression()     {}
 func (CompoundLiteral) isExpression()     {}
 func (CompoundLiteralData) isExpression() {}
+func (HeapAlloc) isExpression()           {}
+func (Type) isExpression()                {}
 
 func (BasicLit) isStatement()            {}
 func (BinaryExpr) isStatement()          {}
@@ -284,3 +294,5 @@ func (MemberExpr) isStatement()          {}
 func (ArrayMemberExpr) isStatement()     {}
 func (CompoundLiteral) isStatement()     {}
 func (CompoundLiteralData) isStatement() {}
+func (HeapAlloc) isStatement()           {}
+func (Type) isStatement()                {}

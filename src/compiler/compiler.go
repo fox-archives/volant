@@ -74,6 +74,14 @@ func (c *Compiler) popScope() {
 	c.ScopeCount--
 }
 
+func (c *Compiler) operator(op Token) {
+	c.append(op.Buff)
+}
+
+func (c *Compiler) identifier(identifer Token) {
+	c.append(identifer.Buff)
+}
+
 func (c *Compiler) indent() {
 	for i := 0; i < c.ScopeCount; i++ {
 		c.append([]byte("	"))
@@ -109,11 +117,30 @@ func (c *Compiler) Statement(stmt Statement) {
 		c.append([]byte("continue;"))
 	case NullStatement:
 		c.semicolon()
+	case Block:
+		c.indent()
+		c.block(stmt.(Block))
+	case Defer:
+		c.defr(stmt.(Defer))
 	default:
 		c.indent()
 		c.expression(stmt.(Expression))
 		c.semicolon()
 	}
+}
+
+func (c *Compiler) defr(defr Defer) {
+	c.indent()
+	c.append([]byte("defer"))
+	c.space()
+	c.openCurlyBrace()
+	c.pushScope()
+	c.Statement(defr.Stmt)
+	c.newline()
+	c.popScope()
+	c.indent()
+	c.closeCurlyBrace()
+	c.semicolon()
 }
 
 func (c *Compiler) loop(loop Loop) {
@@ -154,46 +181,6 @@ func (c *Compiler) loop(loop Loop) {
 func (c *Compiler) declaration(dec Declaration) {
 	hasValues := len(dec.Values) > 0
 
-	switch len(dec.Types) {
-	case 0:
-	case 1:
-		Type := dec.Types[0]
-
-		switch Type.Type {
-		case IdentifierType:
-			for i, Var := range dec.Identifiers {
-				c.indent()
-				c.basicTypeNoArray(Type)
-				c.append([]byte(" "))
-				c.append(Var.Buff)
-				if hasValues {
-					c.space()
-					c.equal()
-					c.space()
-					c.expression(dec.Values[i])
-				}
-				c.semicolon()
-				c.newline()
-			}
-		case FuncType:
-			for i, Var := range dec.Identifiers {
-				c.indent()
-				c.append(dec.Values[i].(FunctionExpression).ReturnTypes[0].Identifier.Buff)
-				c.space()
-				c.append(Var.Buff)
-				c.openParen()
-
-				for _, Arg := range dec.Values[i].(FunctionExpression).Args {
-					c.arg(Arg)
-				}
-
-				c.closeParen()
-				c.block(dec.Values[i].(FunctionExpression).Block)
-			}
-		}
-		return
-	}
-
 	for i, Var := range dec.Identifiers {
 		Type := dec.Types[i]
 
@@ -215,18 +202,31 @@ func (c *Compiler) declaration(dec Declaration) {
 			c.newline()
 
 		case FuncType:
+			Func := dec.Values[i].(FunctionExpression)
+
 			c.indent()
-			c.append(dec.Values[i].(FunctionExpression).ReturnTypes[0].Identifier.Buff)
+			c.identifier(Func.ReturnTypes[0].Identifier)
 			c.space()
 			c.append(Var.Buff)
 			c.openParen()
 
-			for _, Arg := range dec.Values[i].(FunctionExpression).Args {
-				c.arg(Arg)
-			}
+			args := Func.Args
 
+			if len(args) > 0 {
+				c.basicTypeNoArray(args[0].Type)
+				c.space()
+				c.identifier(args[0].Identifier)
+
+				for i := 1; i < len(args); i++ {
+					c.comma()
+					c.space()
+					c.basicTypeNoArray(args[i].Type)
+					c.space()
+					c.identifier(args[i].Identifier)
+				}
+			}
 			c.closeParen()
-			c.block(dec.Values[i].(FunctionExpression).Block)
+			c.block(Func.Block)
 		}
 	}
 }
@@ -241,14 +241,6 @@ func (c *Compiler) rturn(rtrn Return) {
 	}
 
 	c.semicolon()
-}
-
-func (c *Compiler) arg(arg ArgStruct) {
-	c.basicTypeNoArray(arg.Type)
-	c.space()
-	c.identifier(arg.Identifier)
-	c.comma()
-	c.space()
 }
 
 func (c *Compiler) block(block Block) {
@@ -269,9 +261,9 @@ func (c *Compiler) expression(expr Expression) {
 	case CallExpr:
 		c.functionCall(expr.(CallExpr))
 	case BasicLit:
-		c.append(expr.(BasicLit).Value.Buff)
+		c.identifier(expr.(BasicLit).Value)
 	case IdentExpr:
-		c.append(expr.(IdentExpr).Value.Buff)
+		c.identifier(expr.(IdentExpr).Value)
 	case BinaryExpr:
 		switch expr.(BinaryExpr).Left.(type) {
 		case BasicLit:
@@ -358,7 +350,7 @@ func (c *Compiler) expression(expr Expression) {
 		if len(expr.(CompoundLiteral).Data.Fields) > 0 {
 			for i, field := range expr.(CompoundLiteral).Data.Fields {
 				c.dot()
-				c.append(field.Buff)
+				c.identifier(field)
 				c.space()
 				c.equal()
 				c.space()
@@ -374,6 +366,13 @@ func (c *Compiler) expression(expr Expression) {
 			}
 		}
 		c.closeCurlyBrace()
+	case TypeCast:
+		c.openParen()
+		c.expression(expr.(TypeCast).Type)
+		c.closeParen()
+		c.expression(expr.(TypeCast).Expr)
+	case HeapAlloc:
+		c.heapAlloc(expr.(HeapAlloc))
 	}
 }
 
@@ -393,12 +392,8 @@ func (c *Compiler) functionCall(call CallExpr) {
 	c.closeParen()
 }
 
-func (c *Compiler) identifier(identifer Token) {
-	c.append(identifer.Buff)
-}
-
-func (c *Compiler) basicTypeNoArray(Type TypeStruct) {
-	c.append(Type.Identifier.Buff)
+func (c *Compiler) basicTypeNoArray(Type Type) {
+	c.identifier(Type.Identifier)
 
 	for x := byte(0); x < Type.PointerIndex; x++ {
 		c.append([]byte("*"))
@@ -473,7 +468,7 @@ func (c *Compiler) swtch(swtch Switch) {
 	if swtch.Type == NoneSwtch {
 		c.append([]byte("1"))
 	} else {
-		c.expression(swtch.Condition)
+		c.expression(swtch.Expr)
 	}
 	c.closeParen()
 	c.openCurlyBrace()
@@ -487,7 +482,7 @@ func (c *Compiler) swtch(swtch Switch) {
 		c.colon()
 
 		c.pushScope()
-		for _, stmt := range Case.Statements {
+		for _, stmt := range Case.Block.Statements {
 			c.Statement(stmt)
 		}
 		c.popScope()
@@ -518,10 +513,6 @@ func (c *Compiler) swtch(swtch Switch) {
 	}
 }
 
-func (c *Compiler) operator(op Token) {
-	c.append(op.Buff)
-}
-
 func (c *Compiler) structTypedef(st Struct) {
 	c.append([]byte("typedef struct {"))
 	c.newline()
@@ -534,7 +525,7 @@ func (c *Compiler) structTypedef(st Struct) {
 	c.popScope()
 	c.closeCurlyBrace()
 	c.space()
-	c.append(st.Identifier.Buff)
+	c.identifier(st.Identifier)
 	c.semicolon()
 	c.newline()
 }
@@ -546,7 +537,7 @@ func (c *Compiler) enumTypedef(en Enum) {
 
 	for x, prop := range en.Identifiers {
 		c.indent()
-		c.append(prop.Buff)
+		c.identifier(prop)
 		val := en.Values[x]
 
 		if val != nil {
@@ -586,7 +577,14 @@ func (c *Compiler) tupleTypedef(en Tuple) {
 	c.popScope()
 	c.closeCurlyBrace()
 	c.space()
-	c.append(en.Identifier.Buff)
+	c.identifier(en.Identifier)
 	c.semicolon()
 	c.newline()
+}
+
+func (c *Compiler) heapAlloc(expr HeapAlloc) {
+	c.append([]byte("new"))
+	c.openParen()
+	c.basicTypeNoArray(expr.Type)
+	c.closeParen()
 }
