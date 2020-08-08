@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+   base:
+      container_name: replit-polygot-container
+      image: replco/polygott:latest
+      # user: 1000:1000
+      privileged: false
+      working_dir: /opt/app
+      command: ./run.sh
+      volumes:
+         - type: bind
+           source: ./
+           target: /opt/app
+      environment:
+         GO_PATH: ""
