@@ -23,19 +23,13 @@ input: func() i32 = func(str: __mem_block) __mem_block {
 } 
 
 main: func() i32 = func() i32 {
-    /*
-    function: func () i32 = func () i32 {
-        return 0;
-    }
-    */
-
     x: [10]i8 = [0, 1, 2];
     y: [10]*i8;
-    z: const *const i8;
+    z: [10]*const u8;
     
     printf("function() returned %i\n", function());
     
-    str, num: *i8, i32 = "hehehehe", 3 - 2 / 2 * 5 + 10 
+    str, num: *i8, i32 = "hehehehe", 3 - 2 / 2 * -5 + 10 
     
     defer printf("Haha I'll be printed on the last\n")
 

@@ -3,7 +3,7 @@
 ```go
 tuple Kaka {u8, u16, u32};
 
-kaka := Kaka{0, 0, 0};
+kaka := (Kaka){0, 0, 0};
 
 a, b, c	:= kaka; 				// error: expected 3 values, got 1.
 a, b, c	:= ..kaka; 				// success

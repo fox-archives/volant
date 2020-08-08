@@ -12,7 +12,7 @@ variable = 6; // error: variable is immutable
 
 The `const` keyword when used with arrays makes all its elements immutable.
 ```
-array: const u8[2] = [0, 1];
+array: const [2]u8 = [0, 1];
 array[0] = 1; // error: array is immutable
 ```
 
