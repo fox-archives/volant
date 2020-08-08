@@ -12,6 +12,6 @@ const (
 )
 
 func NewError(err langError, message string, line int, column int) {
-hore	errorstring := string(err) + " on line %d column %d: " + message
+	errorstring := string(err) + " on line %d column %d: " + message
 	log.Fatal(fmt.Sprintf(errorstring, line, column))
 }
