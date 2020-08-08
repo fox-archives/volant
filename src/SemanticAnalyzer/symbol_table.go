@@ -56,7 +56,7 @@ func (t *SymbolTable) DeleteAll(Scope int) {
 	last := (*Node)(nil)
 
 	for node != nil {
-		if node.Scope == Scope {
+		if last != nil && node.Scope == Scope {
 			last.Next = node.Next
 		}
 		last = node

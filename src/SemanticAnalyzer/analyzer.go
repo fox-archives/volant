@@ -46,7 +46,7 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) {
 		}
 	}
 
-	if len(dec.Types) != len(dec.Values) {
+	if len(dec.Values) > 0 && len(dec.Types) != len(dec.Values) {
 		NewError(SyntaxError, "Invalid number of types or values specified", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
 	}
 
