@@ -2,6 +2,7 @@
 package main
 
 import (
+	"C"
 	"fmt"
 	"io/ioutil"
 
@@ -12,7 +13,7 @@ import (
 
 func main() {
 
-	dat, _ := ioutil.ReadFile("test.vo")
+	dat, _ := ioutil.ReadFile("../test.vo")
 
 	var lexer = parser.Lexer{
 		Buffer: dat,

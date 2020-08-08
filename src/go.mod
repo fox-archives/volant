@@ -1,3 +1,3 @@
-module github.com/eankeen/volant/v2
+module github.com/eankeen/volant
 
 go 1.14

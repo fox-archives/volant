@@ -13,7 +13,7 @@ type SymbolTable struct {
 type Node struct {
 	Identifier parser.Token
 	Scope      int
-	Type       TypeStruct
+	Type       parser.TypeStruct
 	Next       *Node
 }
 
@@ -22,7 +22,7 @@ func (t *SymbolTable) Add(node *Node) {
 	t.First = node
 }
 
-func (t *SymbolTable) Find(Ident Token, Scope int) *Node {
+func (t *SymbolTable) Find(Ident parser.Token, Scope int) *Node {
 	node := t.First
 
 	if node == nil {
@@ -40,7 +40,7 @@ func (t *SymbolTable) Find(Ident Token, Scope int) *Node {
 	return node
 }
 
-func (t *SymbolTable) Delete(Ident Token, Scope int) {
+func (t *SymbolTable) Delete(Ident parser.Token, Scope int) {
 	node := t.First
 	last := (*Node)(nil)
 

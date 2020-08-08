@@ -20,16 +20,16 @@ func (s *SemanticAnalyzer) popScope() {
 	s.CurrentScope--
 }
 
-func (s *SemanticAnalyzer) Statement(stmt Statement) {
+func (s *SemanticAnalyzer) Statement(stmt parser.Statement) {
 	switch stmt.(type) {
-	case Declaration:
-		s.declaration(stmt.(Declaration))
-	case Block:
-		s.block(stmt.(Block))
+	case parser.Declaration:
+		s.declaration(stmt.(parser.Declaration))
+	case parser.Block:
+		s.block(stmt.(parser.Block))
 	}
 }
 
-func (s *SemanticAnalyzer) block(block Block) {
+func (s *SemanticAnalyzer) block(block parser.Block) {
 	s.pushScope()
 	for _, stmt := range block.Statements {
 		s.Statement(stmt)
@@ -37,7 +37,7 @@ func (s *SemanticAnalyzer) block(block Block) {
 	s.popScope()
 }
 
-func (s *SemanticAnalyzer) declaration(dec Declaration) {
+func (s *SemanticAnalyzer) declaration(dec parser.Declaration) {
 
 	if len(dec.Types) == 1 {
 		Type := dec.Types[0]
@@ -47,12 +47,12 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) {
 	}
 
 	if len(dec.Values) > 0 && len(dec.Types) != len(dec.Values) {
-		NewError(SyntaxError, "Invalid number of types or values specified", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
+		parser.NewError(parser.SyntaxError, "Invalid number of types or values specified", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
 	}
 
 	for i, Ident := range dec.Identifiers {
 		if s.getSymbol(Ident) != nil {
-			NewError(SyntaxError, string(Ident.Buff)+" has already been declared.", Ident.Line, Ident.Column)
+			parser.NewError(parser.SyntaxError, string(Ident.Buff)+" has already been declared.", Ident.Line, Ident.Column)
 		} else {
 			s.addSymbol(Ident, dec.Types[i])
 		}
@@ -60,12 +60,12 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) {
 
 	for _, Val := range dec.Values {
 		switch Val.(type) {
-		case FuncExpr:
-			s.block(Val.(FuncExpr).Block)
+		case parser.FuncExpr:
+			s.block(Val.(parser.FuncExpr).Block)
 		}
 	}
 }
 
-func (s *SemanticAnalyzer) addSymbol(Ident Token, Type TypeStruct) {
+func (s *SemanticAnalyzer) addSymbol(Ident parser.Token, Type parser.TypeStruct) {
 	s.Symbols.Add(&Node{Identifier: Ident, Scope: s.CurrentScope, Type: Type})
 }
