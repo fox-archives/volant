@@ -1,4 +1,4 @@
-cpackage parser
+package parser
 
 import (
 	"fmt"
