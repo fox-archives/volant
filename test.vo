@@ -31,8 +31,8 @@ main: func() i32 = func() i32 {
 
     x: [10]i8 = [0, 1, 2];
     y: [10]*i8;
-    z: const [10]* const i8;
-
+    z: const *const i8;
+    
     printf("function() returned %i\n", function());
     
     str, num: *i8, i32 = "hehehehe", 3 - 2 / 2 * 5 + 10 

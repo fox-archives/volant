@@ -60,7 +60,7 @@ i32 main(){
 
 	i8* y[10];
 
-	const i8 const* z[10];
+	i8 const* const z;
 
 	printf("function() returned %i\n", function());
 	i8* str = "hehehehe";

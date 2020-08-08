@@ -462,9 +462,11 @@ func (c *Compiler) declarationType(Typ Type, Ident Token) {
 		c.space()
 		c.identifier(Ident)
 	case ConstType:
+		c.Type(Typ.(ConstType).BaseType)
+		c.space()
 		c.append([]byte("const"))
 		c.space()
-		c.declarationType(Typ.(ConstType).BaseType, Ident)
+		c.identifier(Ident)
 	case ArrayType:
 		c.declarationType(Typ.(ArrayType).BaseType, Ident)
 		c.openBrace()
