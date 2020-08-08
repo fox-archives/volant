@@ -1,15 +1,25 @@
 #!/bin/bash -eu
 
-# prequisite packpackages
-# libgc-dev
-# libblocksruntimee-dev
-
 set -o pipefail
 
+FILENAME="${FILENAME:-volantgobin}"
+
+rm "./a.out" -f || true
+rm "$FILENAME" -f || true
+
+printf "\e[0;34m%s\e[0m\n" "go building..."
 cd src
-go run . > test.c
-cp test.c ../
+go build -o "$FILENAME"
+cp "$FILENAME" ..
 cd ..
 
-foo=/usr/include/
-(clang test.c -pthread -fblocks -lBlocksRuntime -lgc -isystem$foo && clang test.c -pthread -fblocks -lBlocksRuntime -lgc -isystem${foo}) && ./a.out
+printf "\e[0;34m%s\e[0m\n" "executing go binary, generating test.c"
+install-pkg libgc-dev libblocksruntimee-dev || echo "SUCCESS?: ${?}"
+
+printf "\e[0;34m%s\e[0m\n" "installing packages"
+"./${FILENAME}" > test.c
+
+printf "\e[0;34m%s\e[0m\n" "executing go generating test.c"
+INC="${INC:-/usr/include/}"
+clang test.c -pthread -fblocks -lBlocksRuntime -lgc -isystem$INC -v
+./a.out
