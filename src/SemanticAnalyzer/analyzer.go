@@ -1,13 +1,13 @@
 package SemanticAnalyzer
 
-import . "parser"
+import "github.com/eankeen/volant/parser"
 
 type SemanticAnalyzer struct {
 	Symbols      SymbolTable
 	CurrentScope int
 }
 
-func (s *SemanticAnalyzer) getSymbol(Ident Token) *Node {
+func (s *SemanticAnalyzer) getSymbol(Ident parser.Token) *Node {
 	return s.Symbols.Find(Ident, s.CurrentScope)
 }
 

@@ -2,7 +2,8 @@ package SemanticAnalyzer
 
 import (
 	"bytes"
-	. "parser"
+
+	"github.com/eankeen/volant/parser"
 )
 
 type SymbolTable struct {
@@ -10,7 +11,7 @@ type SymbolTable struct {
 }
 
 type Node struct {
-	Identifier Token
+	Identifier parser.Token
 	Scope      int
 	Type       TypeStruct
 	Next       *Node

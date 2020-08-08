@@ -2,12 +2,12 @@
 package main
 
 import (
-	"SemanticAnalyzer"
-	"compiler"
 	"fmt"
 	"io/ioutil"
-	"parser"
-	. "parser"
+
+	"github.com/eankeen/volant/SemanticAnalyzer"
+	"github.com/eankeen/volant/compiler"
+	"github.com/eankeen/volant/parser"
 )
 
 func main() {

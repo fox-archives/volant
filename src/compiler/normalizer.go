@@ -2,11 +2,11 @@
 
 package compiler
 
-import . "parser"
+import "github.com/eankeen/volant/parser"
 
 type Normalizer struct{}
 
-func (n *Normalizer) GlobalStatement(stmt Statement) Statement {
+func (n *Normalizer) GlobalStatement(stmt parser.Statement) parser.Statement {
 	switch stmt.(type) {
 	case StructTypedef:
 		return n.strct(stmt.(StructTypedef))
@@ -20,7 +20,7 @@ func (n *Normalizer) GlobalStatement(stmt Statement) Statement {
 	return stmt
 }
 
-func (n *Normalizer) declaration(dec Declaration) Declaration {
+func (n *Normalizer) declaration(dec parser.Declaration) parser.Declaration {
 	switch len(dec.Types) {
 	case 1:
 		Type := dec.Types[0]
@@ -36,21 +36,21 @@ func (n *Normalizer) declaration(dec Declaration) Declaration {
 	return dec
 }
 
-func (n *Normalizer) strct(strct StructTypedef) StructTypedef {
+func (n *Normalizer) strct(strct parser.StructTypedef) parser.StructTypedef {
 	for i, prop := range strct.Type.Props {
 		strct.Type.Props[i] = n.declaration(prop)
 	}
 	return strct
 }
 
-func (n *Normalizer) enum(enum EnumTypedef) EnumTypedef {
+func (n *Normalizer) enum(enum parser.EnumTypedef) parser.EnumTypedef {
 	return enum
 }
 
-func (n *Normalizer) tple(tple TupleTypedef) TupleTypedef {
+func (n *Normalizer) tple(tple parser.TupleTypedef) parser.TupleTypedef {
 	return tple
 }
 
-func (n *Normalizer) expression(expr Expression) Expression {
+func (n *Normalizer) expression(expr parser.Expression) parser.Expression {
 	return expr
 }

@@ -1,8 +1,9 @@
 package compiler
 
 import (
-	. "parser"
 	"strconv"
+
+	"github.com/eankeen/volant/parser"
 )
 
 type Compiler struct {
@@ -78,7 +79,7 @@ func (c *Compiler) operator(op Token) {
 	c.append(op.Buff)
 }
 
-func (c *Compiler) identifier(identifer Token) {
+func (c *Compiler) identifier(identifer parser.Token) {
 	c.append(identifer.Buff)
 }
 
