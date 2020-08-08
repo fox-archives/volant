@@ -1,4 +1,4 @@
-// This file basically makes the ast more verbose and converts the sematics of volant to c (kinda) and ik its prob badly named.
+// This file basically makes the ast more verbose and converts the semantics of volant to c (kinda) and ik its prob badly named.
 
 package compiler
 

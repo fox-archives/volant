@@ -52,12 +52,3 @@ func GetWordType(str string) PrimaryTokenType {
 	}
 	return Identifier
 }
-
-func IsBinaryOp(op Token) bool {
-	return op.PrimaryType == AirthmaticOperator || op.PrimaryType == RelationalOperator || (op.PrimaryType == BitwiseOperator && op.SecondaryType != Not) || op.PrimaryType == LogicalOperator
-}
-
-func IsUnaryOp(op Token) bool {
-	// `mul` and `and` are pointer operators here
-	return op.SecondaryType == Not || op.SecondaryType == And || op.SecondaryType == Mul
-}

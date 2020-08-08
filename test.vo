@@ -33,6 +33,8 @@ main: func() int = func() int {
     defer printf("Haha I'll be printed on the last\n")
 
     a: *__mem_block = &(new char)
+    a: char = "hehe"
+    
     m: __mem_block = new int
     
     cast(m._ptr, intptr)[0] = 0
@@ -41,7 +43,6 @@ main: func() int = func() int {
     printf("m is %i.\nLength of m is %li\n", *cast(m._ptr, intptr), len(m))
     printf("function() returned %i.\n", function())
 
-    
     p: Kaka = (Kaka){a: 0, b: 0}
     q: Kakakak = (Kakakak){0, 0}
 

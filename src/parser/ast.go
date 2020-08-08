@@ -29,7 +29,7 @@ const (
 
 type ArgStruct struct {
 	Identifier Token
-	Type       Expression
+	Type       TypeStruct
 }
 
 type CaseStruct struct {
@@ -58,7 +58,7 @@ type (
 	}
 	Declaration struct {
 		Identifiers []Token
-		Types       []Expression
+		Types       []TypeStruct
 		Values      []Expression
 	}
 	Import struct {
@@ -152,7 +152,7 @@ type (
 	FuncExpr struct {
 		Type        FunctionType
 		Args        []ArgStruct
-		ReturnTypes []Expression
+		ReturnTypes []TypeStruct
 		Block       Block
 	}
 
@@ -198,8 +198,8 @@ type (
 type (
 	FuncType struct {
 		Type        FunctionType
-		Args        []Expression
-		ReturnTypes []Expression
+		Args        []TypeStruct
+		ReturnTypes []TypeStruct
 	}
 
 	StructType struct {
@@ -207,7 +207,7 @@ type (
 	}
 
 	TupleType struct {
-		Types []Expression
+		Types []TypeStruct
 	}
 
 	EnumType struct {

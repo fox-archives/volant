@@ -1,4 +1,4 @@
-package parser
+cpackage parser
 
 import (
 	"fmt"
@@ -12,6 +12,6 @@ const (
 )
 
 func NewError(err langError, message string, line int, column int) {
-	errorstring := string(err) + " on line %d column %d:\n" + message
+hore	errorstring := string(err) + " on line %d column %d: " + message
 	log.Fatal(fmt.Sprintf(errorstring, line, column))
 }

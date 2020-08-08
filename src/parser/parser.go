@@ -138,7 +138,7 @@ func (parser *Parser) parseImport() Import {
 	return imprt
 }
 
-func (parser *Parser) parseType(allowTypeDefs bool, alllowUnnamed bool) Expression {
+func (parser *Parser) parseType(allowTypeDefs bool, alllowUnnamed bool) TypeStruct {
 	var pointerIndex byte = 0
 	var typ TypeStruct
 
@@ -172,8 +172,8 @@ func (parser *Parser) parseType(allowTypeDefs bool, alllowUnnamed bool) Expressi
 	return typ
 }
 
-func (parser *Parser) parseTypeArray() []Expression {
-	types := []Expression{}
+func (parser *Parser) parseTypeArray() []TypeStruct {
+	types := []TypeStruct{}
 
 	if token := parser.ReadToken(); token.PrimaryType == RightParen {
 		return types
@@ -232,7 +232,7 @@ func (parser *Parser) parseFunctionType() FuncType {
 		parser.expect(RightParen, SecondaryNullType)
 		parser.eatLastToken()
 	} else if token.PrimaryType != Comma && token.PrimaryType != SemiColon && token.SecondaryType != Equal && token.PrimaryType != RightParen {
-		function.ReturnTypes = []Expression{parser.parseType(false, false)}
+		function.ReturnTypes = []TypeStruct{parser.parseType(false, false)}
 	}
 
 	return function
@@ -342,7 +342,7 @@ func (parser *Parser) parseDeclaration() Declaration {
 	if next := parser.ReadToken(); next.SecondaryType != Equal {
 		declaration.Types = parser.parseTypeArray()
 	} else {
-		declaration.Types = []Expression{}
+		declaration.Types = []TypeStruct{}
 	}
 
 	if next := parser.ReadToken(); next.SecondaryType == Equal {
@@ -989,7 +989,7 @@ func (parser *Parser) parseFunctionExpr() FuncExpr {
 		parser.expect(RightParen, SecondaryNullType)
 		parser.eatLastToken()
 	} else if token.PrimaryType != LeftCurlyBrace {
-		function.ReturnTypes = []Expression{parser.parseType(false, false)}
+		function.ReturnTypes = []TypeStruct{parser.parseType(false, false)}
 	}
 
 	// parse code block
@@ -1001,8 +1001,8 @@ func (parser *Parser) parseFunctionExprOrType() Expression {
 
 	Type := FunctionType(0)
 	var Args []ArgStruct
-	var ArgTypes []Expression
-	var ReturnTypes []Expression
+	var ArgTypes []TypeStruct
+	var ReturnTypes []TypeStruct
 
 	var isType bool
 	var sure bool = false
@@ -1060,7 +1060,7 @@ func (parser *Parser) parseFunctionExprOrType() Expression {
 		parser.expect(RightParen, SecondaryNullType)
 		parser.eatLastToken()
 	} else if token.PrimaryType != LeftCurlyBrace {
-		ReturnTypes = []Expression{parser.parseType(false, false)}
+		ReturnTypes = []TypeStruct{parser.parseType(false, false)}
 	}
 
 	// parse code block
