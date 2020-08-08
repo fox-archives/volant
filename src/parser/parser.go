@@ -544,6 +544,9 @@ func (parser *Parser) parseStatement() Statement {
 	case ContinueKeyword:
 		parser.eatLastToken()
 		st = Continue{}
+	case DeleteKeyword:
+		parser.eatLastToken()
+		st = Delete{parser.parseExpression()}
 	default:
 		parser.fork(0)
 		expr := parser.parseExpression()

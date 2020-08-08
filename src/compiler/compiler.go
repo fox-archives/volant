@@ -134,11 +134,22 @@ func (c *Compiler) statement(stmt Statement) {
 		c.block(stmt.(Block))
 	case Defer:
 		c.defr(stmt.(Defer))
+	case Delete:
+		c.delete(stmt.(Delete))
 	default:
 		c.indent()
 		c.expression(stmt.(Expression))
 		c.semicolon()
 	}
+}
+
+func (c *Compiler) delete(delete Delete) {
+	c.indent()
+	c.append([]byte("delete"))
+	c.openParen()
+	c.expression(delete.Expr)
+	c.closeParen()
+	c.semicolon()
 }
 
 func (c *Compiler) defr(defr Defer) {
@@ -469,13 +480,29 @@ func (c *Compiler) declarationType(Typ Type, Ident Token) {
 		c.identifier(Ident)
 	case ArrayType:
 		c.declarationType(Typ.(ArrayType).BaseType, Ident)
+		switch Typ.(ArrayType).BaseType.(type) {
+		case DynamicType:
+			break
+		default:
+			c.openBrace()
+			c.identifier(Typ.(ArrayType).Size)
+			c.closeBrace()
+		}
 		c.openBrace()
 		c.identifier(Typ.(ArrayType).Size)
 		c.closeBrace()
 	case ImplictArrayType:
 		c.declarationType(Typ.(ArrayType).BaseType, Ident)
-		c.openBrace()
-		c.closeBrace()
+		switch Typ.(ArrayType).BaseType.(type) {
+		case DynamicType:
+			break
+		default:
+			c.openBrace()
+			c.closeBrace()
+		}
+	case DynamicType:
+		c.append([]byte("__mem_block "))
+		c.identifier(Ident)
 	}
 }
 
@@ -492,13 +519,25 @@ func (c *Compiler) Type(Typ Type) {
 		c.append([]byte("const"))
 	case ArrayType:
 		c.Type(Typ.(ArrayType).BaseType)
-		c.openBrace()
-		c.identifier(Typ.(ArrayType).Size)
-		c.closeBrace()
+		switch Typ.(ArrayType).BaseType.(type) {
+		case DynamicType:
+			break
+		default:
+			c.openBrace()
+			c.identifier(Typ.(ArrayType).Size)
+			c.closeBrace()
+		}
 	case ImplictArrayType:
-		c.Type(Typ.(ArrayType).BaseType)
-		c.openBrace()
-		c.closeBrace()
+		c.Type(Typ.(ImplictArrayType).BaseType)
+		switch Typ.(ImplictArrayType).BaseType.(type) {
+		case DynamicType:
+			break
+		default:
+			c.openBrace()
+			c.closeBrace()
+		}
+	case DynamicType:
+		c.append([]byte("__mem_block"))
 	}
 }
 
@@ -688,5 +727,20 @@ func (c *Compiler) heapAlloc(expr HeapAlloc) {
 	c.append([]byte("new"))
 	c.openParen()
 	c.Type(expr.Type.(Type))
+	c.comma()
+	switch expr.Type.(type) {
+	case BasicType:
+		c.Type(expr.Type.(Type))
+	case PointerType:
+		c.Type(expr.Type.(PointerType).BaseType)
+	case ConstType:
+		c.Type(expr.Type.(ConstType).BaseType)
+	case DynamicType:
+		c.Type(expr.Type.(DynamicType).BaseType)
+	case ImplictArrayType:
+		c.Type(expr.Type.(ImplictArrayType).BaseType)
+	case ArrayType:
+		c.Type(expr.Type.(ArrayType).BaseType)
+	}
 	c.closeParen()
 }

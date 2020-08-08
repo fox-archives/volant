@@ -52,5 +52,13 @@ func (n *Normalizer) tple(tple TupleTypedef) TupleTypedef {
 }
 
 func (n *Normalizer) expression(expr Expression) Expression {
+	switch expr.(type) {
+	case ArrayMemberExpr:
+
+	case BasicLit:
+		return expr
+	case IdentExpr:
+		return expr
+	}
 	return expr
 }

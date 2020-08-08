@@ -12,7 +12,7 @@ type SymbolTable struct {
 type Node struct {
 	Identifier Token
 	Scope      int
-	Type       TypeStruct
+	Type       Type
 	Next       *Node
 }
 

@@ -109,6 +109,10 @@ type (
 	Defer struct {
 		Stmt Statement
 	}
+	Delete struct {
+		Expr Expression
+	}
+
 	Break         struct{}
 	Continue      struct{}
 	NullStatement struct{}
@@ -139,14 +143,6 @@ type (
 		Cond  Expression
 		Left  Expression
 		Right Expression
-	}
-
-	ArrExpr struct {
-		Expr []Expression
-	}
-
-	ParenExpr struct {
-		Expr Expression
 	}
 
 	FuncExpr struct {
@@ -260,13 +256,12 @@ func (NullStatement) isStatement() {}
 func (Break) isStatement()         {}
 func (Continue) isStatement()      {}
 func (Defer) isStatement()         {}
+func (Delete) isStatement()        {}
 
 func (BasicLit) isExpression()            {}
 func (BinaryExpr) isExpression()          {}
 func (UnaryExpr) isExpression()           {}
-func (ArrExpr) isExpression()             {}
 func (CallExpr) isExpression()            {}
-func (ParenExpr) isExpression()           {}
 func (FuncExpr) isExpression()            {}
 func (TernaryExpr) isExpression()         {}
 func (PostfixUnaryExpr) isExpression()    {}
@@ -282,9 +277,7 @@ func (ArrayLiteral) isExpression()        {}
 func (BasicLit) isStatement()            {}
 func (BinaryExpr) isStatement()          {}
 func (UnaryExpr) isStatement()           {}
-func (ArrExpr) isStatement()             {}
 func (CallExpr) isStatement()            {}
-func (ParenExpr) isStatement()           {}
 func (FuncExpr) isStatement()            {}
 func (TernaryExpr) isStatement()         {}
 func (PostfixUnaryExpr) isStatement()    {}

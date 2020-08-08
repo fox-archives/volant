@@ -9,8 +9,11 @@ static inline void defer_cleanup (void (^*b) ()) { (*b) (); }
 #define malloc(x) GC_MALLOC(x)
 #define free(x) GC_FREE(x)
 
-#define new(type) ((__mem_block){malloc(sizeof(type)), sizeof(type)})
-#define len(block) block.size
+#define new(type, base_type) ((__mem_block){malloc(sizeof(type)), sizeof(type)/sizeof(base_type), sizeof(base_type)})
+#define size(block) (block.len*block.el_size)
+#define len(block) (block.len)
+#define delete(block) free(block._ptr); block.len = 0; block._ptr = NULL;
+
 #define cast(val, type) ((type)val)
 
 typedef unsigned char u8;
@@ -27,7 +30,8 @@ typedef long i64;
  
 typedef struct {
     char *_ptr;
-    size_t size;
+    size_t len;
+    size_t el_size;
 } __mem_block;
 
 size_t size = sizeof(char[10]);
@@ -56,11 +60,11 @@ __mem_block input(__mem_block str){
 	return str;
 }
 i32 main(){
-	i8 x[10] = {0, 1, 2, };
+	i8 x[10][10] = {0, 1, 2, };
 
-	i8* y[10];
+	i8* y[10][10];
 
-	u8 const* z[10];
+	u8 const* z[10][10];
 
 	printf("function() returned %i\n", function());
 	i8* str = "hehehehe";
@@ -69,16 +73,24 @@ i32 main(){
 	defer {
 		printf("Haha I'll be printed on the last\n");
 	};
-	__mem_block* a = &(new(i8));
+	__mem_block* a = &(new(i8,i8));
 
-	__mem_block m = new(i32);
+	__mem_block m;
 
+	m = new(i32[100],i32);
+
+	printf("Size of m is %zu. Length of m is %zu.\n", size(m), len(m));
+	delete(m);
+	printf("Deleted m. Size of m is %zu. Length of m is %zu.\n", size(m), len(m));
+	m = new(i32[200],i32);
+
+	printf("Size of m is %zu. Length of m is %zu.\n", size(m), len(m));
 	i32 uninitialized;
 
 	(cast(m._ptr, intptr))[0] = 0;
 
 	printf("size is %li.\n", size);
-	printf("m is %i.\nLength of m is %li\n", *(cast(m._ptr, intptr)), len(m));
+	printf("m is %i.\nLength of m is %zu\n", ((i32*)(m._ptr))[0], size(m));
 	printf("function() returned %i.\n", function());
 	Kaka p = (Kaka){.a = 0, .b = 0, };
 

@@ -62,6 +62,7 @@ const (
 	NewKeyword      PrimaryTokenType = 119
 	ConstKeyword    PrimaryTokenType = 120
 	DynamicKeyword  PrimaryTokenType = 121
+	DeleteKeyword   PrimaryTokenType = 122
 
 	// the parser stops parsing when it receives either of these types and shows the correct error message
 	EOF        PrimaryTokenType = 254
@@ -158,6 +159,7 @@ var Keywords = map[string]PrimaryTokenType{
 	"new":      NewKeyword,
 	"const":    ConstKeyword,
 	"dynamic":  DynamicKeyword,
+	"delete":   DeleteKeyword,
 	// more stuff
 }
 

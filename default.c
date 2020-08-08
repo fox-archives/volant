@@ -9,8 +9,11 @@ static inline void defer_cleanup (void (^*b) ()) { (*b) (); }
 #define malloc(x) GC_MALLOC(x)
 #define free(x) GC_FREE(x)
 
-#define new(type) ((__mem_block){malloc(sizeof(type)), sizeof(type)})
-#define len(block) block.size
+#define new(type, base_type) ((__mem_block){malloc(sizeof(type)), sizeof(type)/sizeof(base_type), sizeof(base_type)})
+#define size(block) (block.len*block.el_size)
+#define len(block) (block.len)
+#define delete(block) free(block._ptr); block.len = 0; block._ptr = NULL;
+
 #define cast(val, type) ((type)val)
 
 typedef unsigned char u8;
@@ -27,7 +30,8 @@ typedef long i64;
  
 typedef struct {
     char *_ptr;
-    size_t size;
+    size_t len;
+    size_t el_size;
 } __mem_block;
 
 size_t size = sizeof(char[10]);
