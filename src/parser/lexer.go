@@ -412,7 +412,7 @@ func (lexer *Lexer) lexOperator() Token {
 			lexer.eatLastByte()
 			return Token{PrimaryType: AssignmentOperator, SecondaryType: DivEqual, Buff: []byte("/="), Line: line, Column: column}
 		default:
-			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Div, Buff: []byte("="), Line: line, Column: column}
+			return Token{PrimaryType: AirthmaticOperator, SecondaryType: Div, Buff: []byte("/"), Line: line, Column: column}
 		}
 	case '%':
 		lexer.eatLastByte()

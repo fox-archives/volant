@@ -51,7 +51,7 @@ int main(){
 	};;
 	printf("function() returned %i\n", function());
 	char* str = "hehehehe";
-	int num = (10+10)*10;
+	int num = (3-((2/2)*5))+10;
 
 	defer {
 		printf("Haha I'll be printed on the last\n");

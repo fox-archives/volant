@@ -715,57 +715,79 @@ func (parser *Parser) parseExpr(state int) Expression {
 		return Cond
 	case 1: // Logical And/Or
 		Left := parser.parseExpr(2)
-
-		if token := parser.ReadToken(); token.PrimaryType == LogicalOperator {
-			parser.eatLastToken()
-			return BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(2)}
+		for {
+			if token := parser.ReadToken(); token.PrimaryType == LogicalOperator {
+				parser.eatLastToken()
+				Left = BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(2)}
+			} else {
+				break
+			}
 		}
 		return Left
 	case 2: // Bitwise And/Or/Xor
 		Left := parser.parseExpr(3)
-
-		if token := parser.ReadToken(); token.SecondaryType == Or || token.SecondaryType == And || token.SecondaryType == ExclusiveOr {
-			parser.eatLastToken()
-			return BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(3)}
+		for {
+			if token := parser.ReadToken(); token.SecondaryType == Or || token.SecondaryType == And || token.SecondaryType == ExclusiveOr {
+				parser.eatLastToken()
+				Left = BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(3)}
+			} else {
+				break
+			}
 		}
 		return Left
 	case 3: // Relational Equal/Not equal
 		Left := parser.parseExpr(4)
-
-		if token := parser.ReadToken(); token.SecondaryType == EqualEqual || token.SecondaryType == NotEqual {
-			parser.eatLastToken()
-			return BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(4)}
+		for {
+			if token := parser.ReadToken(); token.SecondaryType == EqualEqual || token.SecondaryType == NotEqual {
+				parser.eatLastToken()
+				Left = BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(4)}
+			} else {
+				break
+			}
 		}
 		return Left
 	case 4: // Relational Greater/Less/Greater or equal/Less or equal
 		Left := parser.parseExpr(5)
-
-		if token := parser.ReadToken(); token.SecondaryType == Greater || token.SecondaryType == Less || token.SecondaryType == LessEqual || token.SecondaryType == GreaterEqual {
-			parser.eatLastToken()
-			return BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(5)}
+		for {
+			if token := parser.ReadToken(); token.SecondaryType == Greater || token.SecondaryType == Less || token.SecondaryType == LessEqual || token.SecondaryType == GreaterEqual {
+				parser.eatLastToken()
+				Left = BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(5)}
+			} else {
+				break
+			}
 		}
 		return Left
 	case 5: // Bitwise left shift/ right shift
 		Left := parser.parseExpr(6)
-
-		if token := parser.ReadToken(); token.SecondaryType == LeftShift || token.SecondaryType == RightShift {
-			parser.eatLastToken()
-			return BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(6)}
+		for {
+			if token := parser.ReadToken(); token.SecondaryType == LeftShift || token.SecondaryType == RightShift {
+				parser.eatLastToken()
+				Left = BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(6)}
+			} else {
+				break
+			}
 		}
 		return Left
 	case 6: // Add/Sub
 		Left := parser.parseExpr(7)
-
-		if token := parser.ReadToken(); token.SecondaryType == Add || token.SecondaryType == Sub {
-			parser.eatLastToken()
-			return BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(7)}
+		for {
+			if token := parser.ReadToken(); token.SecondaryType == Add || token.SecondaryType == Sub {
+				parser.eatLastToken()
+				Left = BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(7)}
+			} else {
+				break
+			}
 		}
 		return Left
 	case 7: // Div/Miv/Mod
 		Left := parser.parseExpr(8)
-		if token := parser.ReadToken(); token.SecondaryType == Mul || token.SecondaryType == Div || token.SecondaryType == Modulus {
-			parser.eatLastToken()
-			return BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(8)}
+		for {
+			if token := parser.ReadToken(); token.SecondaryType == Mul || token.SecondaryType == Div || token.SecondaryType == Modulus {
+				parser.eatLastToken()
+				Left = BinaryExpr{Left: Left, Op: token, Right: parser.parseExpr(8)}
+			} else {
+				break
+			}
 		}
 		return Left
 	case 8: // unary */&/+/-/++/--/!/~
@@ -777,32 +799,54 @@ func (parser *Parser) parseExpr(state int) Expression {
 			return UnaryExpr{Op: token, Expr: parser.parseExpr(9)}
 		}
 
+		var expr Expression
+
 		if token := parser.ReadToken(); token.SecondaryType == Mul {
 			parser.eatLastToken()
-			expr := parser.parseExpr(9)
 
 			switch expr.(type) {
 			case Type:
-				return TypeStruct{PointerIndex: 1, Base: expr}
+				expr = TypeStruct{PointerIndex: 1, Base: expr}
 			default:
-				return UnaryExpr{Op: token, Expr: expr}
+				expr = UnaryExpr{Op: token, Expr: parser.parseExpr(9)}
 			}
 
 		} else if token.SecondaryType == And || token.SecondaryType == Not || token.SecondaryType == BitwiseNot {
 			parser.eatLastToken()
-			return UnaryExpr{Expr: parser.parseExpr(8), Op: token}
+			expr = UnaryExpr{Expr: parser.parseExpr(9), Op: token}
+		} else {
+			return parser.parseExpr(9)
 		}
-		return parser.parseExpr(9)
+
+		for {
+			if token := parser.ReadToken(); token.SecondaryType == Mul {
+				parser.eatLastToken()
+
+				switch expr.(type) {
+				case Type:
+					expr = TypeStruct{PointerIndex: 1, Base: expr}
+				default:
+					expr = UnaryExpr{Op: token, Expr: expr}
+				}
+
+			} else if token.SecondaryType == And || token.SecondaryType == Not || token.SecondaryType == BitwiseNot {
+				parser.eatLastToken()
+				expr = UnaryExpr{Expr: expr, Op: token}
+			} else {
+				break
+			}
+		}
+		return expr
 	case 9: // function call, postfix ++/--, struct/array members, parenthesis
-		var expr Expression
-		expr = parser.parseExpr(10)
+		expr := parser.parseExpr(10)
 
 		for {
 			token := parser.ReadToken()
 
 			if token.SecondaryType == AddAdd || token.SecondaryType == SubSub {
 				parser.eatLastToken()
-				return PostfixUnaryExpr{Op: token, Expr: expr}
+				expr = PostfixUnaryExpr{Op: token, Expr: expr}
+				break
 			}
 
 			if token.PrimaryType == LeftParen {
@@ -813,6 +857,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 					expr = CallExpr{Function: expr, Args: []Expression{}}
 					continue
 				}
+
 				switch expr.(type) {
 				case Type:
 					expr = TypeCast{Expr: parser.parseExpr(0), Type: expr.(Type)}
@@ -849,7 +894,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 		}
 
 		return expr
-	case 10:
+	case 10: // parentheses, compound literals
 		token := parser.ReadToken()
 		var expr Expression
 
@@ -867,6 +912,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 			parser.eatLastToken()
 			return CompoundLiteral{Name: expr, Data: parser.parseCompoundLiteral()}
 		}
+
 		return expr
 	case 11: // literals
 		token := parser.ReadToken()
