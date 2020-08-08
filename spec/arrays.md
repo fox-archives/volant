@@ -1,6 +1,6 @@
 # Arrays
 
-Arrays are linear memory structures representing a group of values. Arrays in [lang name] have type `type[num]`.
+Arrays are linear memory structures representing a group of values. Arrays in `Volant` have type `type[num]`.
 For example, `array: u8[10]` declares an array of 10 `u8`s.
 
 Arrays are stack based, so 10 bytes are pushed direclty to stack when the `array` is declared but the values are not initialized.

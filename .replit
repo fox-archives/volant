@@ -1,0 +1,2 @@
+language = "bash"
+run = "export GOPATH=$HOME/replit-jam-language && go run ./src > test.c && (clang test.c -pthread -fblocks -lBlocksRuntime -lgc -isystem/home/runner/.apt/usr/include/ || install-pkg libgc-dev libblocksruntimee-dev && clang test.c -pthread -fblocks -lBlocksRuntime -lgc -isystem/home/runner/.apt/usr/include/) && ./a.out"

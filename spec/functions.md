@@ -1,6 +1,6 @@
 # Functions
 
-Functions in [lang name] are expressions and can be used as ordinary values.
+Functions in Volant are expressions and can be used as ordinary values.
 
 ## Declarating a function
 Functions are declared like this, where the first parentheses represents the types of function argumnets and the second represents the types of return vales. Functions ca take as many arguments as they need and can return as any values as they need.

@@ -1,6 +1,6 @@
 # Mutability
 
-Varuables in [lang name] are mutable by default but their size is always fixed. For creating immutable variables, `const` keyword can be used before the type to tell the compiler for not allowing any mutability for the variable.
+Variables in Volant are mutable by default but their size is always fixed. For creating immutable variables, `const` keyword can be used before the type to tell the compiler for not allowing any mutability for the variable.
 The varaibles declared using the `const` keyowrd have to be initialized when declared.
 ```
 variable: const u8; // error: constant variables must be initialized when declared

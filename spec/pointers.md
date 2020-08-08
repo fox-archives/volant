@@ -18,4 +18,4 @@ var2: u8 = *ptr;
 
 Pointers are allowed to mutate the value they are refering to unless the pointer or the underlying value is declared using the `const` keyword.
 
-Pointer maths is not allowed.
+Pointer maths is allowed.

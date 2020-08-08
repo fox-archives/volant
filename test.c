@@ -81,6 +81,7 @@ int main(){
 	printf("Second letter of what you entered is %c.\n", (mem+1)[0]);
 	printf("You entered %s.\n\nRandom stuff below...\n", mem);
 	free(mem);
+	printf("foo here is thing\n");
 	{
 		int x = 0;
 		if(num){

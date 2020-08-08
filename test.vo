@@ -62,6 +62,8 @@ main: func() int = func() int {
 
     free(mem)
 
+    printf("foo here is thing\n")
+
     if x: int = 0; num {
         printf("str is \"%s\" and num is %i.\n", str, num)
         x ? printf("hehe x is not xero.\n\n") : printf("hehe x is zero.\n\n")
