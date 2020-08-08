@@ -13,6 +13,16 @@ static inline void defer_cleanup (void (^*b) ()) { (*b) (); }
 #define len(block) block.size
 #define cast(val, type) ((type)val)
 
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long u64;
+
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef long i64;
+
 #define intptr int *
  
 typedef struct {

@@ -1,5 +1,5 @@
 struct Kaka {
-    a, b: int
+    a, b: i32
 }
 
 enum Kakak {
@@ -9,35 +9,42 @@ enum Kakak {
     d
 }
 
-tuple Kakakak {char, int}
+tuple Kakakak {i8, i32}
 
-function: func() int = func () int {
+// heh: *func();
+
+function: func() i32 = func () i32 {
     return 100
 }
 
-input: func() int = func(str: __mem_block) __mem_block {
+input: func() i32 = func(str: __mem_block) __mem_block {
     scanf("%s", str._ptr);
     return str;
 } 
 
-main: func() int = func() int {
-    
-    function: func () int = func () int {
+main: func() i32 = func() i32 {
+    /*
+    function: func () i32 = func () i32 {
         return 0;
     }
-    
+    */
+
+    x: [10]i8 = [0, 1, 2];
+    y: [10]*i8;
+    z: const [10]* const i8;
+
     printf("function() returned %i\n", function());
     
-    str, num: *char, int = "hehehehe", 3 - 2 / 2 * 5 + 10 
+    str, num: *i8, i32 = "hehehehe", 3 - 2 / 2 * 5 + 10 
     
     defer printf("Haha I'll be printed on the last\n")
 
-    a: *__mem_block = &(new char)
-    // a: char = "hehe"
+    a: *__mem_block = &(new i8)
+    // a: i8 = "hehe"
 
-    m: __mem_block = new int
+    m: __mem_block = new i32
     
-    uninitialized: int;
+    uninitialized: i32;
     
     cast(m._ptr, intptr)[0] = 0
 
@@ -51,7 +58,8 @@ main: func() int = func() int {
     printf("p.a is %i and p.b is %i.\n", p.a, p.b);
     printf("q[0] is %i and q[1] is %i.\n\n", q._0, q._1)
     
-    mem: *char = malloc(sizeof(char)*10)
+    mem: *i8 = malloc(sizeof(i8[10]))
+    // mem: i8[10];
 
     printf("Enter something: ")
     scanf("%s", mem)
@@ -62,18 +70,18 @@ main: func() int = func() int {
 
     free(mem)
 
-    if x: int = 0; num {
+    if x: i32 = 0; num {
         printf("str is \"%s\" and num is %i.\n", str, num)
         x ? printf("hehe x is not xero.\n\n") : printf("hehe x is zero.\n\n")
     }
     
-    for i: int = 10; i; i-- {
+    for i: i32 = 10; i; i-- {
         printf("i is %i and num is %i\n", i, num)
     }
 
-    switch p: int = 0; num {
+    switch p: i32 = 0; num {
     case 90:
-        printf("num is 90. p is %i.\n", cast(p, int))
+        printf("num is 90. p is %i.\n", cast(p, i32))
         break
     default:
         printf("num is not 90. p is %i.\n", p)
@@ -83,7 +91,7 @@ main: func() int = func() int {
     printf("\nhaha eternal heap allocater goes brr..\n")
     
     for i: long = 0;; ++i {
-        new char
+        new i8
         if i % 10000 == 0 {
             printf("\rallocated %li bytes", i)
         }

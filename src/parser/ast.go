@@ -29,7 +29,7 @@ const (
 
 type ArgStruct struct {
 	Identifier Token
-	Type       TypeStruct
+	Type       Type
 }
 
 type CaseStruct struct {
@@ -58,7 +58,7 @@ type (
 	}
 	Declaration struct {
 		Identifiers []Token
-		Types       []TypeStruct
+		Types       []Type
 		Values      []Expression
 	}
 	Import struct {
@@ -152,7 +152,7 @@ type (
 	FuncExpr struct {
 		Type        FunctionType
 		Args        []ArgStruct
-		ReturnTypes []TypeStruct
+		ReturnTypes []Type
 		Block       Block
 	}
 
@@ -190,6 +190,10 @@ type (
 		Values []Expression
 	}
 
+	ArrayLiteral struct {
+		Exprs []Expression
+	}
+
 	HeapAlloc struct {
 		Type Expression
 	}
@@ -198,8 +202,8 @@ type (
 type (
 	FuncType struct {
 		Type        FunctionType
-		Args        []TypeStruct
-		ReturnTypes []TypeStruct
+		Args        []Type
+		ReturnTypes []Type
 	}
 
 	StructType struct {
@@ -207,7 +211,7 @@ type (
 	}
 
 	TupleType struct {
-		Types []TypeStruct
+		Types []Type
 	}
 
 	EnumType struct {
@@ -219,10 +223,25 @@ type (
 		Expr Expression
 	}
 
-	TypeStruct struct {
-		PointerIndex byte
-		Base         Expression
-		IsDynamic    byte
+	PointerType struct {
+		BaseType Type
+	}
+
+	DynamicType struct {
+		BaseType Type
+	}
+
+	ConstType struct {
+		BaseType Type
+	}
+
+	ImplictArrayType struct {
+		BaseType Type
+	}
+
+	ArrayType struct {
+		Size     Token
+		BaseType Type
 	}
 )
 
@@ -258,6 +277,7 @@ func (ArrayMemberExpr) isExpression()     {}
 func (CompoundLiteral) isExpression()     {}
 func (CompoundLiteralData) isExpression() {}
 func (HeapAlloc) isExpression()           {}
+func (ArrayLiteral) isExpression()        {}
 
 func (BasicLit) isStatement()            {}
 func (BinaryExpr) isStatement()          {}
@@ -275,24 +295,37 @@ func (ArrayMemberExpr) isStatement()     {}
 func (CompoundLiteral) isStatement()     {}
 func (CompoundLiteralData) isStatement() {}
 func (HeapAlloc) isStatement()           {}
+func (ArrayLiteral) isStatement()        {}
 
-func (BasicType) isType()  {}
-func (StructType) isType() {}
-func (EnumType) isType()   {}
-func (TupleType) isType()  {}
-func (TypeStruct) isType() {}
-func (FuncType) isType()   {}
+func (BasicType) isType()        {}
+func (StructType) isType()       {}
+func (EnumType) isType()         {}
+func (TupleType) isType()        {}
+func (FuncType) isType()         {}
+func (ConstType) isType()        {}
+func (PointerType) isType()      {}
+func (ArrayType) isType()        {}
+func (DynamicType) isType()      {}
+func (ImplictArrayType) isType() {}
 
-func (BasicType) isExpression()  {}
-func (StructType) isExpression() {}
-func (EnumType) isExpression()   {}
-func (TupleType) isExpression()  {}
-func (TypeStruct) isExpression() {}
-func (FuncType) isExpression()   {}
+func (BasicType) isExpression()        {}
+func (StructType) isExpression()       {}
+func (EnumType) isExpression()         {}
+func (TupleType) isExpression()        {}
+func (FuncType) isExpression()         {}
+func (ConstType) isExpression()        {}
+func (PointerType) isExpression()      {}
+func (ArrayType) isExpression()        {}
+func (DynamicType) isExpression()      {}
+func (ImplictArrayType) isExpression() {}
 
-func (BasicType) isStatement()  {}
-func (StructType) isStatement() {}
-func (EnumType) isStatement()   {}
-func (TupleType) isStatement()  {}
-func (TypeStruct) isStatement() {}
-func (FuncType) isStatement()   {}
+func (BasicType) isStatement()        {}
+func (StructType) isStatement()       {}
+func (EnumType) isStatement()         {}
+func (TupleType) isStatement()        {}
+func (FuncType) isStatement()         {}
+func (ConstType) isStatement()        {}
+func (PointerType) isStatement()      {}
+func (ArrayType) isStatement()        {}
+func (DynamicType) isStatement()      {}
+func (ImplictArrayType) isStatement() {}

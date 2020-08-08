@@ -2,7 +2,7 @@
 package main
 
 import (
-	"SemanticAnalyzer"
+	//	"SemanticAnalyzer"
 	"compiler"
 	"fmt"
 	"io/ioutil"
@@ -26,13 +26,13 @@ func main() {
 		ScopeCount: 0,
 		Buff:       []byte(""),
 	}
-	var s = SemanticAnalyzer.SemanticAnalyzer{}
+	//var s = SemanticAnalyzer.SemanticAnalyzer{}
 
 	c.Buff, _ = ioutil.ReadFile("default.c")
 
 	for p.ReadToken().PrimaryType != parser.EOF {
 		stmt := p.ParseGlobalStatement()
-		s.Statement(stmt)
+		//	s.Statement(stmt)
 		c.GlobalStatement(n.GlobalStatement(stmt))
 	}
 

@@ -92,7 +92,7 @@ func (c *Compiler) GlobalStatement(stmt Statement) {
 	c.newline()
 	switch stmt.(type) {
 	case Declaration:
-		c.declaration(stmt.(Declaration), true)
+		c.globalDeclaration(stmt.(Declaration))
 	case Switch:
 		c.swtch(stmt.(Switch))
 	case StructTypedef:
@@ -110,7 +110,7 @@ func (c *Compiler) statement(stmt Statement) {
 	c.newline()
 	switch stmt.(type) {
 	case Declaration:
-		c.declaration(stmt.(Declaration), false)
+		c.globalDeclaration(stmt.(Declaration))
 	case Return:
 		c.rturn(stmt.(Return))
 	case IfElseBlock:
@@ -190,18 +190,81 @@ func (c *Compiler) loop(loop Loop) {
 	}
 }
 
-func (c *Compiler) declaration(dec Declaration, global bool) {
+func (c *Compiler) globalDeclaration(dec Declaration) {
 	hasValues := len(dec.Values) > 0
 
 	for i, Var := range dec.Identifiers {
-		Type := dec.Types[i]
+		Typ := dec.Types[i]
 
-		switch Type.Base.(type) {
-		case BasicType:
+		switch Typ.(type) {
+		case FuncType:
+			if hasValues {
+				Func := dec.Values[i].(FuncExpr)
+
+				c.indent()
+				c.declarationType(Func.ReturnTypes[0], Var)
+				c.openParen()
+
+				args := Func.Args
+
+				if len(args) > 0 {
+					c.declarationType(args[0].Type, args[0].Identifier)
+
+					for i := 1; i < len(args); i++ {
+						c.comma()
+						c.space()
+						c.declarationType(args[i].Type, args[i].Identifier)
+					}
+				}
+				c.closeParen()
+				c.block(Func.Block)
+				/*
+					c.indent()
+					c.declarationType(Func.ReturnTypes[0], Var)
+					c.space()
+					c.openParen()
+					c.append([]byte("^"))
+					c.identifier(Var)
+					c.closeParen()
+					c.openParen()
+
+					args := Func.Args
+
+					if len(args) > 0 {
+						c.declarationType(args[0].Type, args[0].Identifier)
+
+						for i := 1; i < len(args); i++ {
+							c.comma()
+							c.space()
+							c.declarationType(args[i].Type, args[i].Identifier)
+						}
+					}
+					c.closeParen()
+					c.space()
+					c.equal()
+					c.space()
+					c.append([]byte("^"))
+					c.Type(Func.ReturnTypes[0])
+
+					c.openParen()
+
+					if len(args) > 0 {
+						c.declarationType(args[0].Type, args[0].Identifier)
+
+						for i := 1; i < len(args); i++ {
+							c.comma()
+							c.space()
+							c.declarationType(args[i].Type, args[i].Identifier)
+						}
+					}
+					c.closeParen()
+					c.block(Func.Block)
+					c.semicolon()
+				*/
+			}
+		default:
 			c.indent()
-			c.basicTypeNoArray(Type)
-			c.space()
-			c.append(Var.Buff)
+			c.declarationType(Typ, Var)
 
 			if hasValues {
 				c.space()
@@ -212,81 +275,6 @@ func (c *Compiler) declaration(dec Declaration, global bool) {
 
 			c.semicolon()
 			c.newline()
-
-		case FuncType:
-			Func := dec.Values[i].(FuncExpr)
-
-			if global {
-				c.indent()
-				c.basicTypeNoArray(Func.ReturnTypes[0])
-				c.space()
-				c.append(Var.Buff)
-				c.openParen()
-
-				args := Func.Args
-
-				if len(args) > 0 {
-					c.basicTypeNoArray(args[0].Type)
-					c.space()
-					c.identifier(args[0].Identifier)
-
-					for i := 1; i < len(args); i++ {
-						c.comma()
-						c.space()
-						c.basicTypeNoArray(args[i].Type)
-						c.space()
-						c.identifier(args[i].Identifier)
-					}
-				}
-				c.closeParen()
-				c.block(Func.Block)
-			} else {
-				c.indent()
-				c.basicTypeNoArray(Func.ReturnTypes[0])
-				c.space()
-				c.openParen()
-				c.append([]byte("^"))
-				c.identifier(Var)
-				c.closeParen()
-				c.openParen()
-
-				args := Func.Args
-
-				if len(args) > 0 {
-					c.basicTypeNoArray(args[0].Type)
-
-					for i := 1; i < len(args); i++ {
-						c.comma()
-						c.space()
-						c.basicTypeNoArray(args[i].Type)
-					}
-				}
-				c.closeParen()
-				c.space()
-				c.equal()
-				c.space()
-				c.append([]byte("^"))
-				c.expression(Func.ReturnTypes[0].Base.(BasicType).Expr)
-
-				c.openParen()
-
-				if len(args) > 0 {
-					c.basicTypeNoArray(args[0].Type)
-					c.space()
-					c.identifier(args[0].Identifier)
-
-					for i := 1; i < len(args); i++ {
-						c.comma()
-						c.space()
-						c.basicTypeNoArray(args[i].Type)
-						c.space()
-						c.identifier(args[i].Identifier)
-					}
-				}
-				c.closeParen()
-				c.block(Func.Block)
-				c.semicolon()
-			}
 		}
 	}
 }
@@ -428,13 +416,21 @@ func (c *Compiler) expression(expr Expression) {
 		c.closeCurlyBrace()
 	case TypeCast:
 		c.openParen()
-		c.basicTypeNoArray(expr.(TypeCast).Type.(TypeStruct))
+		c.Type(expr.(TypeCast).Type.(Type))
 		c.closeParen()
 		c.openParen()
 		c.expression(expr.(TypeCast).Expr)
 		c.closeParen()
 	case HeapAlloc:
 		c.heapAlloc(expr.(HeapAlloc))
+	case ArrayLiteral:
+		c.openCurlyBrace()
+		for _, expr2 := range expr.(ArrayLiteral).Exprs {
+			c.expression(expr2)
+			c.comma()
+			c.space()
+		}
+		c.closeCurlyBrace()
 	}
 }
 
@@ -454,11 +450,53 @@ func (c *Compiler) functionCall(call CallExpr) {
 	c.closeParen()
 }
 
-func (c *Compiler) basicTypeNoArray(Type TypeStruct) {
-	c.expression(Type.Base.(BasicType).Expr)
-
-	for x := byte(0); x < Type.PointerIndex; x++ {
+func (c *Compiler) declarationType(Typ Type, Ident Token) {
+	switch Typ.(type) {
+	case BasicType:
+		c.expression(Typ.(BasicType).Expr)
+		c.space()
+		c.identifier(Ident)
+	case PointerType:
+		c.Type(Typ.(PointerType).BaseType)
 		c.append([]byte("*"))
+		c.space()
+		c.identifier(Ident)
+	case ConstType:
+		c.append([]byte("const"))
+		c.space()
+		c.declarationType(Typ.(ConstType).BaseType, Ident)
+	case ArrayType:
+		c.declarationType(Typ.(ArrayType).BaseType, Ident)
+		c.openBrace()
+		c.identifier(Typ.(ArrayType).Size)
+		c.closeBrace()
+	case ImplictArrayType:
+		c.declarationType(Typ.(ArrayType).BaseType, Ident)
+		c.openBrace()
+		c.closeBrace()
+	}
+}
+
+func (c *Compiler) Type(Typ Type) {
+	switch Typ.(type) {
+	case BasicType:
+		c.expression(Typ.(BasicType).Expr)
+	case PointerType:
+		c.Type(Typ.(PointerType).BaseType)
+		c.append([]byte("*"))
+	case ConstType:
+		c.Type(Typ.(ConstType).BaseType)
+		c.space()
+		c.append([]byte("const"))
+	case ArrayType:
+		c.Type(Typ.(ArrayType).BaseType)
+		c.openBrace()
+		c.identifier(Typ.(ArrayType).Size)
+		c.closeBrace()
+	case ImplictArrayType:
+		c.Type(Typ.(ArrayType).BaseType)
+		c.openBrace()
+		c.closeBrace()
 	}
 }
 
@@ -581,7 +619,7 @@ func (c *Compiler) structTypedef(st StructTypedef) {
 	c.pushScope()
 
 	for _, prop := range st.Type.Props {
-		c.declaration(prop, false)
+		c.globalDeclaration(prop)
 	}
 
 	c.popScope()
@@ -627,7 +665,7 @@ func (c *Compiler) tupleTypedef(en TupleTypedef) {
 
 	for x, prop := range en.Type.Types {
 		c.indent()
-		c.basicTypeNoArray(prop)
+		c.Type(prop)
 		c.space()
 
 		c.append([]byte("_" + strconv.Itoa(x)))
@@ -647,6 +685,6 @@ func (c *Compiler) tupleTypedef(en TupleTypedef) {
 func (c *Compiler) heapAlloc(expr HeapAlloc) {
 	c.append([]byte("new"))
 	c.openParen()
-	c.basicTypeNoArray(expr.Type.(TypeStruct))
+	c.Type(expr.Type.(Type))
 	c.closeParen()
 }

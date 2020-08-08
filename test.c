@@ -13,6 +13,16 @@ static inline void defer_cleanup (void (^*b) ()) { (*b) (); }
 #define len(block) block.size
 #define cast(val, type) ((type)val)
 
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long u64;
+
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef long i64;
+
 #define intptr int *
  
 typedef struct {
@@ -22,8 +32,8 @@ typedef struct {
 
 size_t size = sizeof(char[10]);
 typedef struct {
-	int a;
-	int b;
+	i32 a;
+	i32 b;
 } Kaka;
 
 typedef enum {
@@ -34,33 +44,36 @@ typedef enum {
 } Kakak;
 
 typedef struct {
-	char _0;
-	int _1;
+	i8 _0;
+	i32 _1;
 } Kakakak;
 
-int function(){
+i32 function(){
 	return 100;
 }
 __mem_block input(__mem_block str){
 	scanf("%s", str._ptr);
 	return str;
 }
-int main(){
-	int (^function)() = ^int(){
-		return 0;
-	};
+i32 main(){
+	i8 x[10] = {0, 1, 2, };
+
+	i8* y[10];
+
+	const i8 const* z[10];
+
 	printf("function() returned %i\n", function());
-	char* str = "hehehehe";
-	int num = (3-((2/2)*5))+10;
+	i8* str = "hehehehe";
+	i32 num = (3-((2/2)*5))+10;
 
 	defer {
 		printf("Haha I'll be printed on the last\n");
 	};
-	__mem_block* a = &(new(char));
+	__mem_block* a = &(new(i8));
 
-	__mem_block m = new(int);
+	__mem_block m = new(i32);
 
-	int uninitialized;
+	i32 uninitialized;
 
 	(cast(m._ptr, intptr))[0] = 0;
 
@@ -73,7 +86,7 @@ int main(){
 
 	printf("p.a is %i and p.b is %i.\n", p.a, p.b);
 	printf("q[0] is %i and q[1] is %i.\n\n", q._0, q._1);
-	char* mem = malloc((sizeof(char))*10);
+	i8* mem = malloc(sizeof(i8[10]));
 
 	printf("Enter something: ");
 	scanf("%s", mem);
@@ -82,7 +95,7 @@ int main(){
 	printf("You entered %s.\n\nRandom stuff below...\n", mem);
 	free(mem);
 	{
-		int x = 0;
+		i32 x = 0;
 		if(num){
 			printf("str is \"%s\" and num is %i.\n", str, num);
 			x ? printf("hehe x is not xero.\n\n") : printf("hehe x is zero.\n\n");
@@ -90,17 +103,17 @@ int main(){
 		}
 	}
 	{
-		int i = 10;
+		i32 i = 10;
 		while(i){
 			printf("i is %i and num is %i\n", i, num);
 			i--;
 		}
 	}
 	{
-		int p = 0;
+		i32 p = 0;
 		switch(num){
 		case 90:
-			printf("num is 90. p is %i.\n", cast(p, int));
+			printf("num is 90. p is %i.\n", cast(p, i32));
 			break;
 		default:
 			printf("num is not 90. p is %i.\n", p);
