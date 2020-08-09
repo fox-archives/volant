@@ -27,7 +27,11 @@ func main() {
 		ScopeCount: 0,
 		Buff:       []byte(""),
 	}
-	var s = SemanticAnalyzer.SemanticAnalyzer{}
+	var s = SemanticAnalyzer.SemanticAnalyzer{
+		Symbols: SemanticAnalyzer.SymbolTable{
+			First: &SemanticAnalyzer.Node{},
+		},
+	}
 
 	c.Buff, _ = ioutil.ReadFile("default.c")
 

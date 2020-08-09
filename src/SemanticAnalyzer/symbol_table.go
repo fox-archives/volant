@@ -17,12 +17,12 @@ type Node struct {
 }
 
 func (t *SymbolTable) Add(node *Node) {
-	node.Next = t.First
-	t.First = node
+	node.Next = t.First.Next
+	t.First.Next = node
 }
 
 func (t *SymbolTable) Find(Ident Token, Scope int) *Node {
-	node := t.First
+	node := t.First.Next
 
 	if node == nil {
 		return nil
@@ -30,7 +30,6 @@ func (t *SymbolTable) Find(Ident Token, Scope int) *Node {
 
 	for bytes.Compare(node.Identifier.Buff, Ident.Buff) != 0 || node.Scope != Scope {
 		node = node.Next
-
 		if node == nil {
 			return nil
 		}
@@ -40,26 +39,29 @@ func (t *SymbolTable) Find(Ident Token, Scope int) *Node {
 }
 
 func (t *SymbolTable) Delete(Ident Token, Scope int) {
-	node := t.First
-	last := (*Node)(nil)
+	last := t.First
+	node := last.Next
 
-	for bytes.Compare(node.Identifier.Buff, Ident.Buff) != 0 || node.Scope != Scope {
+	for node != nil {
+		if bytes.Compare(node.Identifier.Buff, Ident.Buff) == 0 && node.Scope == Scope {
+			last.Next = node.Next
+			return
+		}
 		last = node
 		node = node.Next
 	}
-
-	last.Next = node.Next
 }
 
 func (t *SymbolTable) DeleteAll(Scope int) {
-	node := t.First
-	last := (*Node)(nil)
+	last := t.First
+	node := last.Next
 
 	for node != nil {
-		if last != nil && node.Scope == Scope {
+		if node.Scope == Scope {
 			last.Next = node.Next
+		} else {
+			last = node
 		}
-		last = node
 		node = node.Next
 	}
 }

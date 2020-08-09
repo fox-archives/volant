@@ -8,7 +8,13 @@ type SemanticAnalyzer struct {
 }
 
 func (s *SemanticAnalyzer) getSymbol(Ident Token) *Node {
-	return s.Symbols.Find(Ident, s.CurrentScope)
+	for i := 0; i <= s.CurrentScope; i++ {
+		if symbol := s.Symbols.Find(Ident, i); symbol != nil {
+			return symbol
+		}
+	}
+
+	return nil
 }
 
 func (s *SemanticAnalyzer) addSymbol(Ident Token, Type Type) {
@@ -32,11 +38,23 @@ func (s *SemanticAnalyzer) Statement(stmt Statement) Statement {
 		return s.strct(stmt.(StructTypedef))
 	case Block:
 		return s.block(stmt.(Block))
+	case Assignment:
+		return s.assignment(stmt.(Assignment))
 	case Expression:
-		return s.expr(stmt.(Expression), false)
+		return s.expr(stmt.(Expression))
+	case Return:
+		return s.rturn(stmt.(Return))
 	}
 
 	return stmt
+}
+
+func (s *SemanticAnalyzer) rturn(rturn Return) Return {
+	return Return{Values: s.exprArray(rturn.Values)}
+}
+
+func (s *SemanticAnalyzer) assignment(as Assignment) Assignment {
+	return Assignment{Variables: s.exprArray(as.Variables), Op: as.Op, Values: s.exprArray(as.Values)}
 }
 
 func (s *SemanticAnalyzer) block(block Block) Block {
@@ -80,95 +98,121 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 				Type:        Func.Type,
 			}
 		default:
-			dec.Values[i] = s.expr(Val, false)
+			dec.Values[i] = s.expr(Val)
 		}
 	}
 
 	return dec
 }
 
-func (n *SemanticAnalyzer) strct(strct StructTypedef) StructTypedef {
+func (s *SemanticAnalyzer) strct(strct StructTypedef) StructTypedef {
 	for i, prop := range strct.Type.Props {
-		strct.Type.Props[i] = n.declaration(prop)
+		strct.Type.Props[i] = s.declaration(prop)
 	}
 	return strct
 }
 
-func (s *SemanticAnalyzer) expr(expr Expression, decay bool) Expression {
+func (s *SemanticAnalyzer) expr(expr Expression) Expression {
+	expr2 := expr
+
 	switch expr.(type) {
-	case BasicLit:
-		return expr
-	case IdentExpr:
-		if !decay {
-			return expr
-		}
-		// haha here we do our almighty magic
-		symbol := s.getSymbol(expr.(IdentExpr).Value)
-
-		if symbol == nil {
-			return expr
-		}
-
-		switch symbol.Type.(type) {
-		case DynamicType:
-			switch symbol.Type.(DynamicType).BaseType.(type) {
-			case ImplictArrayType:
-				return TypeCast{
-					Type: Type(PointerType{symbol.Type.(DynamicType).BaseType.(ImplictArrayType).BaseType}),
-					Expr: Expression(MemberExpr{
-						Base: expr,
-						Expr: Expression(IdentExpr{
-							Value: Token{
-								Buff:          []byte("_ptr"),
-								PrimaryType:   Identifier,
-								SecondaryType: SecondaryNullType,
-							},
-						}),
-					}),
-				}
-			default:
-				return TypeCast{
-					Type: Type(PointerType{symbol.Type.(DynamicType).BaseType}),
-					Expr: Expression(MemberExpr{
-						Base: expr,
-						Expr: Expression(IdentExpr{
-							Value: Token{
-								Buff:          []byte("_ptr"),
-								PrimaryType:   Identifier,
-								SecondaryType: SecondaryNullType,
-							},
-						}),
-					}),
-				}
-			}
-		default:
-			return expr
-		}
 	case UnaryExpr:
-		return UnaryExpr{Op: expr.(UnaryExpr).Op, Expr: s.expr(expr.(UnaryExpr).Expr, false)}
+		expr2 = UnaryExpr{Op: expr.(UnaryExpr).Op, Expr: s.expr(expr.(UnaryExpr).Expr)}
 	case BinaryExpr:
-		return BinaryExpr{Left: s.expr(expr.(BinaryExpr).Left, false), Op: expr.(BinaryExpr).Op, Right: s.expr(expr.(BinaryExpr).Right, false)}
+		expr2 = BinaryExpr{Left: s.expr(expr.(BinaryExpr).Left), Op: expr.(BinaryExpr).Op, Right: s.expr(expr.(BinaryExpr).Right)}
 	case PostfixUnaryExpr:
-		return PostfixUnaryExpr{Op: expr.(PostfixUnaryExpr).Op, Expr: s.expr(expr.(PostfixUnaryExpr).Expr, false)}
+		expr2 = PostfixUnaryExpr{Op: expr.(PostfixUnaryExpr).Op, Expr: s.expr(expr.(PostfixUnaryExpr).Expr)}
 	case TernaryExpr:
-		return TernaryExpr{Cond: s.expr(expr.(TernaryExpr).Cond, false), Left: s.expr(expr.(TernaryExpr).Left, false), Right: s.expr(expr.(TernaryExpr).Right, false)}
+		expr2 = TernaryExpr{Cond: s.expr(expr.(TernaryExpr).Cond), Left: s.expr(expr.(TernaryExpr).Left), Right: s.expr(expr.(TernaryExpr).Right)}
 	case ArrayLiteral:
-		return ArrayLiteral{Exprs: s.exprArray(expr.(ArrayLiteral).Exprs, false)}
+		return ArrayLiteral{Exprs: s.exprArray(expr.(ArrayLiteral).Exprs)}
 	case CallExpr:
-		return CallExpr{Function: s.expr(expr.(CallExpr).Function, false), Args: s.exprArray(expr.(CallExpr).Args, false)}
+		expr2 = CallExpr{Function: s.expr(expr.(CallExpr).Function), Args: s.exprArray(expr.(CallExpr).Args)}
 	case TypeCast:
-		return TypeCast{Type: expr.(TypeCast).Type, Expr: s.expr(expr.(TypeCast).Expr, false)}
+		expr2 = TypeCast{Type: expr.(TypeCast).Type, Expr: s.expr(expr.(TypeCast).Expr)}
 	case ArrayMemberExpr:
-		return ArrayMemberExpr{Parent: s.expr(expr.(ArrayMemberExpr).Parent, true), Index: s.expr(expr.(ArrayMemberExpr).Index, false)}
+		expr2 = ArrayMemberExpr{Parent: s.decayToPointer(s.expr(expr.(ArrayMemberExpr).Parent)), Index: s.expr(expr.(ArrayMemberExpr).Index)}
 	}
 
+	return expr2
+}
+
+func (s *SemanticAnalyzer) exprArray(array []Expression) []Expression {
+	Exprs := []Expression{}
+	for _, Expr := range array {
+		Exprs = append(Exprs, s.expr(Expr))
+	}
+	return Exprs
+}
+
+func (s *SemanticAnalyzer) decayToPointer(expr Expression) Expression {
+	Typ := s.getType(expr)
+
+	switch Typ.(type) {
+	case DynamicType:
+
+		switch Typ.(DynamicType).BaseType.(type) {
+		case ImplictArrayType:
+			return TypeCast{
+				Type: Type(PointerType{BaseType: Typ.(DynamicType).BaseType.(ImplictArrayType).BaseType}),
+				Expr: Expression(MemberExpr{
+					Base: expr,
+					Expr: Expression(IdentExpr{
+						Value: Token{
+							Buff:          []byte("_ptr"),
+							PrimaryType:   Identifier,
+							SecondaryType: SecondaryNullType,
+						},
+					}),
+				}),
+			}
+		}
+		return TypeCast{
+			Type: Type(PointerType{BaseType: Typ.(DynamicType).BaseType}),
+			Expr: Expression(MemberExpr{
+				Base: expr,
+				Expr: Expression(IdentExpr{
+					Value: Token{
+						Buff:          []byte("_ptr"),
+						PrimaryType:   Identifier,
+						SecondaryType: SecondaryNullType,
+					},
+				}),
+			}),
+		}
+	}
 	return expr
 }
 
-func (s *SemanticAnalyzer) exprArray(array []Expression, decay bool) []Expression {
-	Exprs := []Expression{}
-	for _, Expr := range array {
-		Exprs = append(Exprs, s.expr(Expr, decay))
+func (s *SemanticAnalyzer) getType(expr Expression) Type {
+	switch expr.(type) {
+	case IdentExpr:
+		symbol := s.getSymbol(expr.(IdentExpr).Value)
+		if symbol != nil {
+			return symbol.Type
+		}
+	case TypeCast:
+		return expr.(TypeCast).Type
+	case UnaryExpr:
+		if expr.(UnaryExpr).Op.SecondaryType == Mul {
+			return s.getType(expr.(UnaryExpr).Expr).(PointerType).BaseType
+		} else if expr.(UnaryExpr).Op.SecondaryType == And {
+			return PointerType{BaseType: s.getType(expr.(UnaryExpr).Expr)}
+		}
+	case CallExpr:
+		return s.getType(expr.(CallExpr).Function).(FuncType).ReturnTypes[0]
+	case ArrayMemberExpr:
+		Typ := s.getType(expr.(ArrayMemberExpr).Parent)
+
+		switch Typ.(type) {
+		case ArrayType:
+			return Typ.(ArrayType).BaseType
+		case ImplictArrayType:
+			return Typ.(ImplictArrayType).BaseType
+		case PointerType:
+			return Typ.(PointerType).BaseType
+		}
 	}
-	return Exprs
+
+	return BasicType{}
 }

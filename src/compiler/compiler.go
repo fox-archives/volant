@@ -348,6 +348,7 @@ func (c *Compiler) expression(expr Expression) {
 			c.closeParen()
 		}
 	case UnaryExpr:
+		c.openParen()
 		c.operator(expr.(UnaryExpr).Op)
 
 		switch expr.(UnaryExpr).Expr.(type) {
@@ -360,6 +361,7 @@ func (c *Compiler) expression(expr Expression) {
 			c.expression(expr.(UnaryExpr).Expr)
 			c.closeParen()
 		}
+		c.closeParen()
 	case PostfixUnaryExpr:
 		switch expr.(PostfixUnaryExpr).Expr.(type) {
 		case BasicLit:
@@ -728,6 +730,7 @@ func (c *Compiler) heapAlloc(expr HeapAlloc) {
 	c.openParen()
 	c.Type(expr.Type.(Type))
 	c.comma()
+
 	switch expr.Type.(type) {
 	case BasicType:
 		c.Type(expr.Type.(Type))
@@ -736,7 +739,13 @@ func (c *Compiler) heapAlloc(expr HeapAlloc) {
 	case ConstType:
 		c.Type(expr.Type.(ConstType).BaseType)
 	case DynamicType:
-		c.Type(expr.Type.(DynamicType).BaseType)
+		Typ := expr.Type.(DynamicType).BaseType
+		switch Typ.(type) {
+		case ImplictArrayType:
+			c.Type(Typ.(ImplictArrayType).BaseType)
+		default:
+			c.Type(Typ)
+		}
 	case ImplictArrayType:
 		c.Type(expr.Type.(ImplictArrayType).BaseType)
 	case ArrayType:

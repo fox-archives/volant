@@ -12,7 +12,7 @@ enum Kakak {
 tuple Kakakak {i8, i32}
 
 // heh: *func();
-
+/*
 function: func() i32 = func () i32 {
     return 100
 }
@@ -89,7 +89,7 @@ main: func() i32 = func() i32 {
         printf("num is not 90. p is %i.\n", p)
     }
 
-    /*
+    
     printf("\nhaha eternal heap allocater goes brr..\n")
     
     for i: long = 0;; ++i {
@@ -98,6 +98,20 @@ main: func() i32 = func() i32 {
             printf("\rallocated %li bytes", i)
         }
     }
-    */
+    
     return 0
 }
+
+*/
+
+function: func () *dynamic []int = func () *dynamic []int {
+    nums: dynamic dynamic []i32 = new dynamic []i32;
+    nums[0] = new [100]i32
+    return &nums[0];
+};
+
+main: func () int = func() int {
+    printf("haha I wont decay to pointer.\n");
+    nums: dynamic []i32 = *function();
+    printf("haha I'll decay to pointer. %i.\n", (*function())[0]);
+};

@@ -158,7 +158,7 @@ type (
 	}
 
 	TypeCast struct {
-		Type Expression
+		Type Type
 		Expr Expression
 	}
 
