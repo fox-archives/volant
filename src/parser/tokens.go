@@ -63,6 +63,7 @@ const (
 	ConstKeyword    PrimaryTokenType = 120
 	DynamicKeyword  PrimaryTokenType = 121
 	DeleteKeyword   PrimaryTokenType = 122
+	TypedefKeyword  PrimaryTokenType = 123
 
 	// the parser stops parsing when it receives either of these types and shows the correct error message
 	EOF        PrimaryTokenType = 254
@@ -160,6 +161,7 @@ var Keywords = map[string]PrimaryTokenType{
 	"const":    ConstKeyword,
 	"dynamic":  DynamicKeyword,
 	"delete":   DeleteKeyword,
+	"typedef":  TypedefKeyword,
 	// more stuff
 }
 
@@ -170,6 +172,7 @@ type Token struct {
 	Buff          []byte
 	Line          int
 	Column        int
+	Size          int
 }
 
 // --------------------------------------------

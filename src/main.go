@@ -2,44 +2,17 @@
 package main
 
 import (
-	//	"SemanticAnalyzer"
-	"SemanticAnalyzer"
-	"compiler"
+	. "compiler"
 	"fmt"
 	"io/ioutil"
-	"parser"
 	. "parser"
+	. "semanticAnalyzer"
 )
 
 func main() {
+	Code, _ := ioutil.ReadFile("test.vo")
+	Default, _ := ioutil.ReadFile("default.c")
 
-	dat, _ := ioutil.ReadFile("test.vo")
-
-	var lexer = parser.Lexer{
-		Buffer: dat,
-	}
-	var p = parser.Parser{
-		Lexer: &lexer,
-		Forks: map[byte]int{},
-	}
-	//var n = compiler.Normalizer{}
-	var c = compiler.Compiler{
-		ScopeCount: 0,
-		Buff:       []byte(""),
-	}
-	var s = SemanticAnalyzer.SemanticAnalyzer{
-		Symbols: SemanticAnalyzer.SymbolTable{
-			First: &SemanticAnalyzer.Node{},
-		},
-	}
-
-	c.Buff, _ = ioutil.ReadFile("default.c")
-
-	for p.ReadToken().PrimaryType != parser.EOF {
-		// stmt := p.ParseGlobalStatement()
-		//	s.Statement(stmt)
-		c.GlobalStatement(s.Statement(p.ParseGlobalStatement()))
-	}
-
-	fmt.Println(string(c.Buff))
+	fmt.Println(string(Default))
+	fmt.Println(string(CompileFile(AnalyzeFile(ParseFile(&Lexer{Buffer: Code})))))
 }

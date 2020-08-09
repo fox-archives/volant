@@ -104,14 +104,24 @@ main: func() i32 = func() i32 {
 
 */
 
-function: func () *dynamic []int = func () *dynamic []int {
-    nums: dynamic dynamic []i32 = new dynamic []i32;
-    nums[0] = new [100]i32
-    return &nums[0];
+typedef integer i32
+
+function := func () dynamic dynamic dynamic []i32 {
+    nums := new dynamic dynamic []i32;
+
+    nums[0] = new dynamic []i32
+    nums[0][0] = new [10]i32
+    nums[0][0][0] = '\U10101010'
+    
+    return nums;
 };
 
-main: func () int = func() int {
+main := func() i32 {
     printf("haha I wont decay to pointer.\n");
-    nums: dynamic []i32 = *function();
-    printf("haha I'll decay to pointer. %i.\n", (*function())[0]);
+    nums := function();
+
+    delete nums[0][0], nums[0], nums
+    printf("haha I'll decay to pointer. %i.\n", function()[0][0][0]);
+
+    printf("Kakak.a is %i.\n", Kakak.a);
 };

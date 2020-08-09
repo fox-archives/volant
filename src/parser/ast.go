@@ -52,6 +52,10 @@ type Type interface {
 	isStatement()
 }
 
+type File struct {
+	Statements []Statement
+}
+
 type (
 	Block struct {
 		Statements []Statement
@@ -110,9 +114,12 @@ type (
 		Stmt Statement
 	}
 	Delete struct {
-		Expr Expression
+		Exprs []Expression
 	}
-
+	Typedef struct {
+		Name Token
+		Type Type
+	}
 	Break         struct{}
 	Continue      struct{}
 	NullStatement struct{}
@@ -191,7 +198,7 @@ type (
 	}
 
 	HeapAlloc struct {
-		Type Expression
+		Type Type
 	}
 )
 
@@ -249,14 +256,26 @@ func (Switch) isStatement()        {}
 func (IfElseBlock) isStatement()   {}
 func (Return) isStatement()        {}
 func (Assignment) isStatement()    {}
-func (EnumTypedef) isStatement()   {}
-func (TupleTypedef) isStatement()  {}
-func (StructTypedef) isStatement() {}
 func (NullStatement) isStatement() {}
 func (Break) isStatement()         {}
 func (Continue) isStatement()      {}
 func (Defer) isStatement()         {}
 func (Delete) isStatement()        {}
+
+func (Typedef) isStatement()       {}
+func (EnumTypedef) isStatement()   {}
+func (TupleTypedef) isStatement()  {}
+func (StructTypedef) isStatement() {}
+
+func (Typedef) isExpression()       {}
+func (EnumTypedef) isExpression()   {}
+func (TupleTypedef) isExpression()  {}
+func (StructTypedef) isExpression() {}
+
+func (Typedef) isType()       {}
+func (EnumTypedef) isType()   {}
+func (TupleTypedef) isType()  {}
+func (StructTypedef) isType() {}
 
 func (BasicLit) isExpression()            {}
 func (BinaryExpr) isExpression()          {}

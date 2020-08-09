@@ -52,3 +52,19 @@ func GetWordType(str string) PrimaryTokenType {
 	}
 	return Identifier
 }
+
+func Pow(a, b int) int {
+	r := 1
+	for i := 0; i < b; i++ {
+		r = r * a
+	}
+	return r
+}
+
+func HexToInt(b byte) int {
+	if IsNumDec(b) {
+		return int(b - 48)
+	} else {
+		return int(b - 65)
+	}
+}

@@ -10,6 +10,16 @@ type Compiler struct {
 	ScopeCount int
 }
 
+func CompileFile(ast File) []byte {
+	c := Compiler{}
+	c.ScopeCount = 0
+
+	for _, statement := range ast.Statements {
+		c.globalStatement(statement)
+	}
+
+	return c.Buff
+}
 func (c *Compiler) append(buff []byte) {
 	c.Buff = append(c.Buff, []byte(buff)...)
 }
@@ -88,7 +98,7 @@ func (c *Compiler) indent() {
 	}
 }
 
-func (c *Compiler) GlobalStatement(stmt Statement) {
+func (c *Compiler) globalStatement(stmt Statement) {
 	c.newline()
 	switch stmt.(type) {
 	case Declaration:
@@ -101,6 +111,8 @@ func (c *Compiler) GlobalStatement(stmt Statement) {
 		c.enumTypedef(stmt.(EnumTypedef))
 	case TupleTypedef:
 		c.tupleTypedef(stmt.(TupleTypedef))
+	case Typedef:
+		c.typedef(stmt.(Typedef))
 	case NullStatement:
 		c.semicolon()
 	}
@@ -143,13 +155,25 @@ func (c *Compiler) statement(stmt Statement) {
 	}
 }
 
-func (c *Compiler) delete(delete Delete) {
-	c.indent()
-	c.append([]byte("delete"))
-	c.openParen()
-	c.expression(delete.Expr)
-	c.closeParen()
+func (c *Compiler) typedef(typedef Typedef) {
+	c.append([]byte("typedef"))
+	c.space()
+	c.Type(typedef.Type)
+	c.space()
+	c.identifier(typedef.Name)
 	c.semicolon()
+}
+
+func (c *Compiler) delete(delete Delete) {
+	for _, Expr := range delete.Exprs {
+		c.indent()
+		c.append([]byte("delete"))
+		c.openParen()
+		c.expression(Expr)
+		c.closeParen()
+		c.semicolon()
+		c.newline()
+	}
 }
 
 func (c *Compiler) defr(defr Defer) {
@@ -209,70 +233,29 @@ func (c *Compiler) globalDeclaration(dec Declaration) {
 
 		switch Typ.(type) {
 		case FuncType:
-			if hasValues {
-				Func := dec.Values[i].(FuncExpr)
-
-				c.indent()
-				c.declarationType(Func.ReturnTypes[0], Var)
-				c.openParen()
-
-				args := Func.Args
-
-				if len(args) > 0 {
-					c.declarationType(args[0].Type, args[0].Identifier)
-
-					for i := 1; i < len(args); i++ {
-						c.comma()
-						c.space()
-						c.declarationType(args[i].Type, args[i].Identifier)
-					}
-				}
-				c.closeParen()
-				c.block(Func.Block)
-				/*
-					c.indent()
-					c.declarationType(Func.ReturnTypes[0], Var)
-					c.space()
-					c.openParen()
-					c.append([]byte("^"))
-					c.identifier(Var)
-					c.closeParen()
-					c.openParen()
-
-					args := Func.Args
-
-					if len(args) > 0 {
-						c.declarationType(args[0].Type, args[0].Identifier)
-
-						for i := 1; i < len(args); i++ {
-							c.comma()
-							c.space()
-							c.declarationType(args[i].Type, args[i].Identifier)
-						}
-					}
-					c.closeParen()
-					c.space()
-					c.equal()
-					c.space()
-					c.append([]byte("^"))
-					c.Type(Func.ReturnTypes[0])
-
-					c.openParen()
-
-					if len(args) > 0 {
-						c.declarationType(args[0].Type, args[0].Identifier)
-
-						for i := 1; i < len(args); i++ {
-							c.comma()
-							c.space()
-							c.declarationType(args[i].Type, args[i].Identifier)
-						}
-					}
-					c.closeParen()
-					c.block(Func.Block)
-					c.semicolon()
-				*/
+			if !hasValues {
+				return
 			}
+
+			Func := dec.Values[i].(FuncExpr)
+
+			c.indent()
+			c.declarationType(Func.ReturnTypes[0], Var)
+			c.openParen()
+
+			args := Func.Args
+
+			if len(args) > 0 {
+				c.declarationType(args[0].Type, args[0].Identifier)
+
+				for i := 1; i < len(args); i++ {
+					c.comma()
+					c.space()
+					c.declarationType(args[i].Type, args[i].Identifier)
+				}
+			}
+			c.closeParen()
+			c.block(Func.Block)
 		default:
 			c.indent()
 			c.declarationType(Typ, Var)

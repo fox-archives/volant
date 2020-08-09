@@ -7,6 +7,23 @@ type Parser struct {
 	Forks    map[byte]int
 }
 
+func ParseFile(inputStream *Lexer) File {
+	parser := Parser{}
+
+	parser.Lexer = inputStream
+	parser.position = 0
+	parser.tokens = []Token{}
+	parser.Forks = map[byte]int{}
+
+	file := File{}
+
+	for parser.ReadToken().PrimaryType != EOF {
+		file.Statements = append(file.Statements, parser.parseGlobalStatement())
+	}
+
+	return file
+}
+
 func (parser *Parser) ReadToken() Token {
 	for parser.position >= len(parser.tokens) {
 		parser.tokens = append(parser.tokens, parser.Lexer.NextToken())
@@ -47,7 +64,7 @@ func (parser *Parser) expect(primary PrimaryTokenType, secondary SecondaryTokenT
 	return token
 }
 
-func (parser *Parser) ParseGlobalStatement() Statement {
+func (parser *Parser) parseGlobalStatement() Statement {
 	var statement Statement
 
 	switch token := parser.ReadToken(); token.PrimaryType {
@@ -63,6 +80,9 @@ func (parser *Parser) ParseGlobalStatement() Statement {
 	case TupleKeyword:
 		parser.eatLastToken()
 		statement = parser.parseTupleTypedef(false)
+	case TypedefKeyword:
+		parser.eatLastToken()
+		statement = parser.parseTypedef()
 	case Identifier:
 		statement = parser.parseDeclaration()
 	default:
@@ -74,6 +94,13 @@ func (parser *Parser) ParseGlobalStatement() Statement {
 	}
 
 	return statement
+}
+
+func (parser *Parser) parseTypedef() Typedef {
+	Name := parser.expect(Identifier, SecondaryNullType)
+	parser.eatLastToken()
+
+	return Typedef{Name: Name, Type: parser.parseType()}
 }
 
 func (parser *Parser) parseStructTypedef(allowUnnamed bool) StructTypedef {
@@ -138,7 +165,7 @@ func (parser *Parser) parseImport() Import {
 	return imprt
 }
 
-func (parser *Parser) parseType(allowTypeDefs bool, alllowUnnamed bool) Type {
+func (parser *Parser) parseType() Type {
 	return parser.parseTypeAHH(0)
 }
 
@@ -149,11 +176,11 @@ func (parser *Parser) parseTypeArray() []Type {
 		return types
 	}
 
-	types = append(types, parser.parseType(false, false))
+	types = append(types, parser.parseType())
 
 	for token := parser.ReadToken(); token.PrimaryType == Comma; token = parser.ReadToken() {
 		parser.eatLastToken()
-		types = append(types, parser.parseType(false, false))
+		types = append(types, parser.parseType())
 	}
 
 	return types
@@ -202,7 +229,7 @@ func (parser *Parser) parseFunctionType() FuncType {
 		parser.expect(RightParen, SecondaryNullType)
 		parser.eatLastToken()
 	} else if token.PrimaryType != Comma && token.PrimaryType != SemiColon && token.SecondaryType != Equal && token.PrimaryType != RightParen {
-		function.ReturnTypes = []Type{parser.parseType(false, false)}
+		function.ReturnTypes = []Type{parser.parseType()}
 	}
 
 	return function
@@ -546,7 +573,7 @@ func (parser *Parser) parseStatement() Statement {
 		st = Continue{}
 	case DeleteKeyword:
 		parser.eatLastToken()
-		st = Delete{parser.parseExpression()}
+		st = Delete{parser.parseExpressionArray()}
 	default:
 		parser.fork(0)
 		expr := parser.parseExpression()
@@ -566,13 +593,12 @@ func (parser *Parser) parseStatement() Statement {
 				parser.eatLastToken()
 			}
 		}
-
-		return st
 	}
 
 	if parser.ReadToken().PrimaryType == SemiColon {
 		parser.eatLastToken()
 	}
+
 	return st
 }
 
@@ -775,7 +801,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 	case 8: // unary */&/+/-/++/--/!/~
 		if token := parser.ReadToken(); token.PrimaryType == NewKeyword {
 			parser.eatLastToken()
-			return HeapAlloc{parser.parseType(false, false)}
+			return HeapAlloc{parser.parseType()}
 		} else if token.SecondaryType == Add || token.SecondaryType == Sub || token.SecondaryType == AddAdd || token.SecondaryType == SubSub {
 			parser.eatLastToken()
 			return UnaryExpr{Op: token, Expr: parser.parseExpr(9)}
@@ -959,7 +985,7 @@ func (parser *Parser) parseFunctionExpr() FuncExpr {
 		parser.expect(RightParen, SecondaryNullType)
 		parser.eatLastToken()
 	} else if token.PrimaryType != LeftCurlyBrace {
-		function.ReturnTypes = []Type{parser.parseType(false, false)}
+		function.ReturnTypes = []Type{parser.parseType()}
 	}
 
 	// parse code block
@@ -1010,7 +1036,7 @@ func (parser *Parser) parseFunctionArg() ArgStruct {
 	parser.expect(PrimaryNullType, Colon)
 	parser.eatLastToken()
 
-	arg.Type = parser.parseType(false, false)
+	arg.Type = parser.parseType()
 	return arg
 }
 

@@ -35,6 +35,7 @@ typedef struct {
 } __mem_block;
 
 size_t size = sizeof(char[10]);
+
 typedef struct {
 	i32 a;
 	i32 b;
@@ -52,16 +53,26 @@ typedef struct {
 	i32 _1;
 } Kakakak;
 
-__mem_block* function(){
-	__mem_block nums = new(__mem_block,i32);
+typedef i32 integer;
+__mem_block function(){
+	__mem_block nums = new(__mem_block,__mem_block);
 
-	((__mem_block*)(nums._ptr))[0] = new(i32[100],i32);
+	((__mem_block*)(nums._ptr))[0] = new(__mem_block,i32);
 
-	return (&(((__mem_block*)(nums._ptr))[0]));
+	((__mem_block*)(((__mem_block*)(nums._ptr))[0]._ptr))[0] = new(i32[10],i32);
+
+	((i32*)(((__mem_block*)(((__mem_block*)(nums._ptr))[0]._ptr))[0]._ptr))[0] = 269488144;
+
+	return nums;
 }
-int main(){
+i32 main(){
 	printf("haha I wont decay to pointer.\n");
-	__mem_block nums = (*(function()));
+	__mem_block nums = function();
 
-	printf("haha I'll decay to pointer. %i.\n", ((int*)((*(function()))._ptr))[0]);
+	delete(((__mem_block*)(((__mem_block*)(nums._ptr))[0]._ptr))[0]);
+	delete(((__mem_block*)(nums._ptr))[0]);
+	delete(nums);
+
+	printf("haha I'll decay to pointer. %i.\n", ((i32*)(((__mem_block*)(((__mem_block*)(function()._ptr))[0]._ptr))[0]._ptr))[0]);
+	printf("Kakak.a is %i.\n", a);
 }
