@@ -77,15 +77,17 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 
 func (s *SemanticAnalyzer) enum(enum EnumTypedef) EnumTypedef {
 	s.addSymbol(enum.Name, enum)
-	for i, ident := range enum.Type.Identifiers {
-		enum.Type.Identifiers[i].Buff = getEnumPropName(enum.Name.Buff, ident.Buff)
+	s.pushScope()
+	for i, Ident := range enum.Type.Identifiers {
+		enum.Type.Identifiers[i] = getEnumProp(enum.Name.Buff, Ident)
 	}
+	s.popScope()
 	return enum
 }
 
 func (s *SemanticAnalyzer) typedef(typedef Typedef) Typedef {
 	s.addSymbol(typedef.Name, typedef)
-	return typedef
+	return Typedef{Type: typedef.Type, Name: getNewVarName(typedef.Name)}
 }
 
 func (s *SemanticAnalyzer) delete(delete Delete) Delete {
@@ -130,9 +132,8 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 		if s.getSymbol(Ident) != nil {
 			NewError(SyntaxError, string(Ident.Buff)+" has already been declared.", Ident.Line, Ident.Column)
 		} else {
-			NewIdent := getVarName(Ident)
-			s.addSymbol(NewIdent, dec.Types[i])
-			dec.Identifiers[i] = NewIdent
+			s.addSymbol(Ident, dec.Types[i])
+			dec.Identifiers[i] = getNewVarName(Ident)
 		}
 	}
 
@@ -141,10 +142,8 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 		case FuncExpr:
 			Func := Val.(FuncExpr)
 			dec.Values[i] = FuncExpr{
-				Block:       s.block(Func.Block),
-				ReturnTypes: Func.ReturnTypes,
-				Args:        Func.Args,
-				Type:        Func.Type,
+				Block: s.block(Func.Block),
+				Type:  Func.Type,
 			}
 		default:
 			dec.Values[i] = s.expr(Val)
@@ -155,9 +154,12 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 }
 
 func (s *SemanticAnalyzer) strct(strct StructTypedef) StructTypedef {
+	s.addSymbol(strct.Identifier, strct.Type)
+	s.pushScope()
 	for i, prop := range strct.Type.Props {
 		strct.Type.Props[i] = s.declaration(prop)
 	}
+	s.popScope()
 	return strct
 }
 
@@ -166,7 +168,7 @@ func (s *SemanticAnalyzer) expr(expr Expression) Expression {
 
 	switch expr.(type) {
 	case IdentExpr:
-		expr2 = IdentExpr{Value: getVarName(expr.(IdentExpr).Value)}
+		expr2 = IdentExpr{Value: getNewVarName(expr.(IdentExpr).Value)}
 	case UnaryExpr:
 		expr2 = UnaryExpr{Op: expr.(UnaryExpr).Op, Expr: s.expr(expr.(UnaryExpr).Expr)}
 	case BinaryExpr:
@@ -182,12 +184,61 @@ func (s *SemanticAnalyzer) expr(expr Expression) Expression {
 	case TypeCast:
 		expr2 = TypeCast{Type: expr.(TypeCast).Type, Expr: s.expr(expr.(TypeCast).Expr)}
 	case ArrayMemberExpr:
-		expr2 = ArrayMemberExpr{Parent: s.decayToPointer(s.expr(expr.(ArrayMemberExpr).Parent)), Index: s.expr(expr.(ArrayMemberExpr).Index)}
+		expr2 = s.arrayMemberExpr(expr.(ArrayMemberExpr))
 	case MemberExpr:
 		expr2 = s.memberExpr(expr.(MemberExpr))
+	case LenExpr:
+		expr2 = s.lenExpr(expr.(LenExpr))
+	case SizeExpr:
+		expr2 = s.sizeExpr(expr.(SizeExpr))
 	}
 
 	return expr2
+}
+
+func (s *SemanticAnalyzer) arrayMemberExpr(expr ArrayMemberExpr) Expression {
+	switch expr.Parent.(type) {
+	//case IdentExpr:
+	//	break
+	default:
+		return ArrayMemberExpr{Parent: s.decayToPointer(s.expr(expr.Parent)), Index: s.expr(expr.Index)}
+	}
+	/*
+		name := expr.Parent.(IdentExpr)
+		symbol := s.getSymbol(name.value)
+
+		switch symbol.Type.(type) {
+		case TupleTypedef:
+			return UnaryExpr{
+				Op: Token{
+					Buff:          []byte("*"),
+					PrimaryType:   AirthmaticOperator,
+					SecondaryType: Mul,
+				},
+				Expr: BinaryExpr{
+					Left: name,
+					Op: Token{
+						Buff:          []byte("+"),
+						PrimaryType:   AirthmaticOperator,
+						SecondaryType: Add,
+					},
+					Right: OffsetExpr{
+
+					},
+				},
+			}
+		}
+	*/
+}
+
+func (s *SemanticAnalyzer) lenExpr(expr LenExpr) LenExpr {
+	Expr := s.expr(expr.Expr)
+	return LenExpr{Expr: Expr, Type: s.getType(Expr)}
+}
+
+func (s *SemanticAnalyzer) sizeExpr(expr SizeExpr) SizeExpr {
+	Expr := s.expr(expr.Expr)
+	return SizeExpr{Expr: Expr, Type: s.getType(Expr)}
 }
 
 func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
@@ -205,19 +256,11 @@ func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
 
 		switch expr.Expr.(type) {
 		case IdentExpr:
-			break;
+			break
 		default:
 			// NewError(SyntaxError, "Expected identifier, got expression", )
 		}
-		return IdentExpr{
-			Value: Token{
-				Buff: getEnumPropName(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value.Buff),
-				PrimaryType: Identifier,
-				SecondaryType: SecondaryNullType,
-				Line: expr.Expr.(IdentExpr).Value.Line,
-				Column: expr.Expr.(IdentExpr).Value.Line,
-			},
-		}
+		return IdentExpr{Value: getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
 	default:
 		return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
 	}
@@ -290,7 +333,7 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 				Size: Token{
 					PrimaryType:   NumberLiteral,
 					SecondaryType: DecimalRadix,
-					Buff:          []byte(strconv.Itoa(expr.(BasicLit).Value.Size)),
+					Buff:          []byte(strconv.Itoa(expr.(BasicLit).Value.Flags)),
 				},
 				BaseType: BasicType{
 					Expr: IdentExpr{
@@ -304,11 +347,15 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 			}
 		}
 	case IdentExpr:
-		symbol := s.getSymbol(expr.(IdentExpr).Value)
-		if symbol != nil {
-			return symbol.Type
+		Ident := expr.(IdentExpr).Value
+		if Ident.Flags == 1 {
+			symbol := s.getSymbol(getActualName(Ident))
+			if symbol != nil {
+				return symbol.Type
+			}
 		}
-		symbol = s.getSymbol(getVarName(expr.(IdentExpr).Value))
+
+		symbol := s.getSymbol(Ident)
 		if symbol != nil {
 			return symbol.Type
 		}
@@ -346,18 +393,9 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 				return Typ.(DynamicType).BaseType
 			}
 		}
-
 		return Typ
 	case FuncExpr:
-		Typ := FuncType{
-			ReturnTypes: expr.(FuncExpr).ReturnTypes,
-			Type:        expr.(FuncExpr).Type,
-		}
-
-		for _, arg := range expr.(FuncExpr).Args {
-			Typ.Args = append(Typ.Args, arg.Type)
-		}
-		return Typ
+		return expr.(FuncExpr).Type
 	case HeapAlloc:
 		switch expr.(HeapAlloc).Type.(type) {
 		case ArrayType:

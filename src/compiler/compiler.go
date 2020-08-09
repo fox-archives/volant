@@ -158,9 +158,13 @@ func (c *Compiler) statement(stmt Statement) {
 func (c *Compiler) typedef(typedef Typedef) {
 	c.append([]byte("typedef"))
 	c.space()
-	c.Type(typedef.Type)
-	c.space()
-	c.identifier(typedef.Name)
+
+	switch typedef.Type.(type) {
+	case FuncType:
+		c.declarationType(typedef.Type, typedef.Name)
+	default:
+		c.declarationType(typedef.Type, typedef.Name)
+	}
 	c.semicolon()
 }
 
@@ -229,36 +233,20 @@ func (c *Compiler) globalDeclaration(dec Declaration) {
 	hasValues := len(dec.Values) > 0
 
 	for i, Var := range dec.Identifiers {
-		Typ := dec.Types[i]
-
-		switch Typ.(type) {
+		switch dec.Types[i].(type) {
 		case FuncType:
-			if !hasValues {
-				return
-			}
-
-			Func := dec.Values[i].(FuncExpr)
-
 			c.indent()
-			c.declarationType(Func.ReturnTypes[0], Var)
-			c.openParen()
+			c.declarationType(dec.Types[i], Var)
 
-			args := Func.Args
-
-			if len(args) > 0 {
-				c.declarationType(args[0].Type, args[0].Identifier)
-
-				for i := 1; i < len(args); i++ {
-					c.comma()
-					c.space()
-					c.declarationType(args[i].Type, args[i].Identifier)
-				}
+			if hasValues {
+				c.block(dec.Values[i].(FuncExpr).Block)
 			}
-			c.closeParen()
-			c.block(Func.Block)
+
+			c.semicolon()
+			c.newline()
 		default:
 			c.indent()
-			c.declarationType(Typ, Var)
+			c.declarationType(dec.Types[i], Var)
 
 			if hasValues {
 				c.space()
@@ -419,6 +407,10 @@ func (c *Compiler) expression(expr Expression) {
 		c.closeParen()
 	case HeapAlloc:
 		c.heapAlloc(expr.(HeapAlloc))
+	case LenExpr:
+		c.lenExpr(expr.(LenExpr))
+	case SizeExpr:
+		c.sizeExpr(expr.(SizeExpr))
 	case ArrayLiteral:
 		c.openCurlyBrace()
 		for _, expr2 := range expr.(ArrayLiteral).Exprs {
@@ -446,52 +438,7 @@ func (c *Compiler) functionCall(call CallExpr) {
 	c.closeParen()
 }
 
-func (c *Compiler) declarationType(Typ Type, Ident Token) {
-	switch Typ.(type) {
-	case BasicType:
-		c.expression(Typ.(BasicType).Expr)
-		c.space()
-		c.identifier(Ident)
-	case PointerType:
-		c.Type(Typ.(PointerType).BaseType)
-		c.append([]byte("*"))
-		c.space()
-		c.identifier(Ident)
-	case ConstType:
-		c.Type(Typ.(ConstType).BaseType)
-		c.space()
-		c.append([]byte("const"))
-		c.space()
-		c.identifier(Ident)
-	case ArrayType:
-		c.declarationType(Typ.(ArrayType).BaseType, Ident)
-		switch Typ.(ArrayType).BaseType.(type) {
-		case DynamicType:
-			break
-		default:
-			c.openBrace()
-			c.identifier(Typ.(ArrayType).Size)
-			c.closeBrace()
-		}
-		c.openBrace()
-		c.identifier(Typ.(ArrayType).Size)
-		c.closeBrace()
-	case ImplictArrayType:
-		c.declarationType(Typ.(ArrayType).BaseType, Ident)
-		switch Typ.(ArrayType).BaseType.(type) {
-		case DynamicType:
-			break
-		default:
-			c.openBrace()
-			c.closeBrace()
-		}
-	case DynamicType:
-		c.append([]byte("__mem_block "))
-		c.identifier(Ident)
-	}
-}
-
-func (c *Compiler) Type(Typ Type) {
+func (c *Compiler) Typ(Typ Type) {
 	switch Typ.(type) {
 	case BasicType:
 		c.expression(Typ.(BasicType).Expr)
@@ -521,8 +468,184 @@ func (c *Compiler) Type(Typ Type) {
 			c.openBrace()
 			c.closeBrace()
 		}
+	case FuncType:
+
 	case DynamicType:
 		c.append([]byte("__mem_block"))
+	}
+}
+
+func (c *Compiler) declarationType(Typ Type, Name Token) {
+	typ := Typ
+	sizes := []Token{}
+	pointers := 0
+
+	for {
+		switch typ.(type) {
+		case ArrayType:
+			sizes = append(sizes, typ.(ArrayType).Size)
+			typ = typ.(ArrayType).BaseType
+			continue
+		case ImplictArrayType:
+			sizes = append(sizes, Token{
+				Buff: []byte(""),
+			})
+			typ = typ.(ImplictArrayType).BaseType
+			continue
+		}
+		break
+	}
+
+	for {
+		switch typ.(type) {
+		case PointerType:
+			pointers++
+			typ = typ.(PointerType).BaseType
+			continue
+		}
+		break
+	}
+
+	for {
+		switch typ.(type) {
+		case FuncType:
+			c.Type(typ.(FuncType).ReturnTypes[0])
+			c.space()
+			c.openParen()
+			for i := 0; i < pointers; i++ {
+				c.append([]byte("*"))
+			}
+			c.identifier(Name)
+			for _, size := range sizes {
+				c.openBrace()
+				c.identifier(size)
+				c.closeBrace()
+			}
+			c.closeParen()
+
+			argNames := typ.(FuncType).ArgNames
+			argTypes := typ.(FuncType).ArgTypes
+
+			c.openParen()
+			if len(argNames) > 0 {
+				c.declarationType(argTypes[0], argNames[0])
+
+				for i := 1; i < len(argNames); i++ {
+					c.comma()
+					c.space()
+					c.declarationType(argTypes[i], argNames[i])
+				}
+			} else {
+				c.Type(argTypes[0])
+				for i := 1; i < len(argNames); i++ {
+					c.comma()
+					c.space()
+					c.Type(argTypes[i])
+				}
+			}
+
+			c.closeParen()
+		default:
+			c.Type(typ)
+			c.space()
+			c.openParen()
+			for i := 0; i < pointers; i++ {
+				c.append([]byte("*"))
+			}
+			c.identifier(Name)
+			c.closeParen()
+			for _, size := range sizes {
+				c.openBrace()
+				c.identifier(size)
+				c.closeBrace()
+			}
+		}
+		break
+	}
+}
+
+func (c *Compiler) Type(Typ Type) {
+	typ := Typ
+	sizes := []Token{}
+	pointers := 0
+
+	for {
+		switch typ.(type) {
+		case ArrayType:
+			sizes = append(sizes, typ.(ArrayType).Size)
+			typ = typ.(ArrayType).BaseType
+			continue
+		case ImplictArrayType:
+			sizes = append(sizes, Token{
+				Buff: []byte(""),
+			})
+			typ = typ.(ImplictArrayType).BaseType
+			continue
+		}
+		break
+	}
+
+	for {
+		switch typ.(type) {
+		case PointerType:
+			pointers++
+			typ = typ.(PointerType).BaseType
+			continue
+		}
+		break
+	}
+
+	for {
+		switch typ.(type) {
+		case FuncType:
+			c.Type(typ.(FuncType).ReturnTypes[0])
+			c.space()
+			c.openParen()
+			for i := 0; i < pointers; i++ {
+				c.append([]byte("*"))
+			}
+			for _, size := range sizes {
+				c.openBrace()
+				c.identifier(size)
+				c.closeBrace()
+			}
+			c.closeParen()
+			argTypes := typ.(FuncType).ArgTypes
+			c.openParen()
+			c.Type(argTypes[0])
+			for i := 1; i < len(argTypes); i++ {
+				c.comma()
+				c.space()
+				c.Type(argTypes[i])
+			}
+			c.closeParen()
+			return
+		case BasicType:
+			c.expression(typ.(BasicType).Expr)
+		case ConstType:
+			c.Type(typ.(ConstType).BaseType)
+			c.space()
+			c.append([]byte("const"))
+		case DynamicType:
+			c.append([]byte("__mem_block"))
+		case PointerType:
+			c.Type(typ.(PointerType).BaseType)
+			c.space()
+			c.append([]byte("*"))
+		default:
+			c.Type(typ)
+			c.space()
+		}
+
+		for i := 0; i < pointers; i++ {
+			c.append([]byte("*"))
+		}
+		for _, size := range sizes {
+			c.openBrace()
+			c.identifier(size)
+			c.closeBrace()
+		}
+		break
 	}
 }
 
@@ -561,7 +684,6 @@ func (c *Compiler) assignment(as Assignment) {
 		c.indent()
 		c.expression(Var)
 
-		//if as.Op.SecondaryType != AddAdd && as.Op.SecondaryType != SubSub {
 		c.space()
 		c.operator(as.Op)
 		c.space()
@@ -570,9 +692,6 @@ func (c *Compiler) assignment(as Assignment) {
 		} else {
 			c.expression(as.Values[0])
 		}
-		//} else {
-		//	c.operator(as.Op)
-		//}
 
 		c.semicolon()
 		c.newline()
@@ -691,11 +810,10 @@ func (c *Compiler) tupleTypedef(en TupleTypedef) {
 
 	for x, prop := range en.Type.Types {
 		c.indent()
-		c.Type(prop)
-		c.space()
-
-		c.append([]byte("_" + strconv.Itoa(x)))
-
+		c.declarationType(prop, Token{
+			Buff:        []byte("_" + strconv.Itoa(x)),
+			PrimaryType: Identifier,
+		})
 		c.semicolon()
 		c.newline()
 	}
@@ -711,28 +829,54 @@ func (c *Compiler) tupleTypedef(en TupleTypedef) {
 func (c *Compiler) heapAlloc(expr HeapAlloc) {
 	c.append([]byte("new"))
 	c.openParen()
-	c.Type(expr.Type.(Type))
-	c.comma()
+	c.Type(expr.Type)
+	c.closeParen()
+}
+
+func (c *Compiler) lenExpr(expr LenExpr) {
 
 	switch expr.Type.(type) {
-	case BasicType:
-		c.Type(expr.Type.(Type))
-	case PointerType:
-		c.Type(expr.Type.(PointerType).BaseType)
-	case ConstType:
-		c.Type(expr.Type.(ConstType).BaseType)
 	case DynamicType:
 		Typ := expr.Type.(DynamicType).BaseType
+		c.append([]byte("len"))
+		c.openParen()
+		c.expression(expr.Expr)
+		c.comma()
 		switch Typ.(type) {
 		case ImplictArrayType:
 			c.Type(Typ.(ImplictArrayType).BaseType)
 		default:
 			c.Type(Typ)
 		}
-	case ImplictArrayType:
-		c.Type(expr.Type.(ImplictArrayType).BaseType)
+		c.closeParen()
 	case ArrayType:
+		c.append([]byte("len2"))
+		c.openParen()
+		c.Type(expr.Type)
+		c.comma()
 		c.Type(expr.Type.(ArrayType).BaseType)
+		c.closeParen()
+	case Typedef:
+		c.append([]byte("len3"))
+		c.openParen()
+		c.Type(expr.Type.(Typedef).Type)
+		c.closeParen()
+	default:
+		c.append([]byte("len3"))
+		c.openParen()
+		c.Type(expr.Type)
+		c.closeParen()
 	}
+}
+
+func (c *Compiler) sizeExpr(expr SizeExpr) {
+	switch expr.Type.(type) {
+	case DynamicType:
+		c.append([]byte("size"))
+	default:
+		c.append([]byte("size2"))
+	}
+	c.openParen()
+	c.expression(expr.Expr)
 	c.closeParen()
 }

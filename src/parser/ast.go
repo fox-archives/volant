@@ -27,11 +27,6 @@ const (
 	NoneSwtch      SwitchType = 3
 )
 
-type ArgStruct struct {
-	Identifier Token
-	Type       Type
-}
-
 type CaseStruct struct {
 	Condition Expression
 	Block     Block
@@ -59,14 +54,20 @@ type File struct {
 type (
 	Block struct {
 		Statements []Statement
+		Line       int
+		Column     int
 	}
 	Declaration struct {
 		Identifiers []Token
 		Types       []Type
 		Values      []Expression
+		Line        int
+		Column      int
 	}
 	Import struct {
-		Paths []Token
+		Paths  []Token
+		Line   int
+		Column int
 	}
 	Loop struct {
 		Type          LoopType
@@ -74,6 +75,8 @@ type (
 		Condition     Expression
 		LoopStatement Statement
 		Block         Block
+		Line          int
+		Column        int
 	}
 	Switch struct {
 		Type           SwitchType
@@ -82,6 +85,8 @@ type (
 		Cases          []CaseStruct
 		HasDefaultCase bool
 		DefaultCase    Block
+		Line           int
+		Column         int
 	}
 	IfElseBlock struct {
 		HasInitStmt   bool
@@ -89,40 +94,67 @@ type (
 		Conditions    []Expression
 		Blocks        []Block
 		ElseBlock     Block
+		Line          int
+		Column        int
 	}
 	Return struct {
 		Values []Expression
+		Line   int
+		Column int
 	}
 	Assignment struct {
 		Variables []Expression
 		Op        Token
 		Values    []Expression
+		Line      int
+		Column    int
 	}
 	EnumTypedef struct {
-		Name Token
-		Type EnumType
+		Name   Token
+		Type   EnumType
+		Line   int
+		Column int
 	}
 	TupleTypedef struct {
 		Identifier Token
 		Type       TupleType
+		Line       int
+		Column     int
 	}
 	StructTypedef struct {
 		Identifier Token
 		Type       StructType
+		Line       int
+		Column     int
 	}
 	Defer struct {
-		Stmt Statement
+		Stmt   Statement
+		Line   int
+		Column int
 	}
 	Delete struct {
-		Exprs []Expression
+		Exprs  []Expression
+		Line   int
+		Column int
 	}
 	Typedef struct {
-		Name Token
-		Type Type
+		Name   Token
+		Type   Type
+		Line   int
+		Column int
 	}
-	Break         struct{}
-	Continue      struct{}
-	NullStatement struct{}
+	Break struct {
+		Line   int
+		Column int
+	}
+	Continue struct {
+		Line   int
+		Column int
+	}
+	NullStatement struct {
+		Line   int
+		Column int
+	}
 )
 
 type (
@@ -153,10 +185,8 @@ type (
 	}
 
 	FuncExpr struct {
-		Type        FunctionType
-		Args        []ArgStruct
-		ReturnTypes []Type
-		Block       Block
+		Type  FuncType
+		Block Block
 	}
 
 	CallExpr struct {
@@ -200,12 +230,23 @@ type (
 	HeapAlloc struct {
 		Type Type
 	}
+
+	LenExpr struct {
+		Expr Expression
+		Type Type
+	}
+
+	SizeExpr struct {
+		Expr Expression
+		Type Type
+	}
 )
 
 type (
 	FuncType struct {
 		Type        FunctionType
-		Args        []Type
+		ArgTypes    []Type
+		ArgNames    []Token
 		ReturnTypes []Type
 	}
 
@@ -262,21 +303,6 @@ func (Continue) isStatement()      {}
 func (Defer) isStatement()         {}
 func (Delete) isStatement()        {}
 
-func (Typedef) isStatement()       {}
-func (EnumTypedef) isStatement()   {}
-func (TupleTypedef) isStatement()  {}
-func (StructTypedef) isStatement() {}
-
-func (Typedef) isExpression()       {}
-func (EnumTypedef) isExpression()   {}
-func (TupleTypedef) isExpression()  {}
-func (StructTypedef) isExpression() {}
-
-func (Typedef) isType()       {}
-func (EnumTypedef) isType()   {}
-func (TupleTypedef) isType()  {}
-func (StructTypedef) isType() {}
-
 func (BasicLit) isExpression()            {}
 func (BinaryExpr) isExpression()          {}
 func (UnaryExpr) isExpression()           {}
@@ -292,6 +318,8 @@ func (CompoundLiteral) isExpression()     {}
 func (CompoundLiteralData) isExpression() {}
 func (HeapAlloc) isExpression()           {}
 func (ArrayLiteral) isExpression()        {}
+func (LenExpr) isExpression()             {}
+func (SizeExpr) isExpression()            {}
 
 func (BasicLit) isStatement()            {}
 func (BinaryExpr) isStatement()          {}
@@ -308,6 +336,8 @@ func (CompoundLiteral) isStatement()     {}
 func (CompoundLiteralData) isStatement() {}
 func (HeapAlloc) isStatement()           {}
 func (ArrayLiteral) isStatement()        {}
+func (LenExpr) isStatement()             {}
+func (SizeExpr) isStatement()            {}
 
 func (BasicType) isType()        {}
 func (StructType) isType()       {}
@@ -341,3 +371,28 @@ func (PointerType) isStatement()      {}
 func (ArrayType) isStatement()        {}
 func (DynamicType) isStatement()      {}
 func (ImplictArrayType) isStatement() {}
+
+func (Typedef) isStatement()       {}
+func (EnumTypedef) isStatement()   {}
+func (TupleTypedef) isStatement()  {}
+func (StructTypedef) isStatement() {}
+
+func (Typedef) isExpression()       {}
+func (EnumTypedef) isExpression()   {}
+func (TupleTypedef) isExpression()  {}
+func (StructTypedef) isExpression() {}
+
+func (Typedef) isType()       {}
+func (EnumTypedef) isType()   {}
+func (TupleTypedef) isType()  {}
+func (StructTypedef) isType() {}
+
+var VoidType = BasicType{
+	Expr: IdentExpr{
+		Value: Token{
+			Buff:          []byte("void"),
+			PrimaryType:   Identifier,
+			SecondaryType: SecondaryNullType,
+		},
+	},
+}

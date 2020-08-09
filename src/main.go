@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	. "parser"
+	"time"
 )
 
 func main() {
@@ -13,5 +14,11 @@ func main() {
 	Default, _ := ioutil.ReadFile("default.c")
 
 	fmt.Println(string(Default))
-	fmt.Println(string(CompileFile(AnalyzeFile(ParseFile(&Lexer{Buffer: Code})))))
+
+	t1 := time.Now()
+	code := string(CompileFile(AnalyzeFile(ParseFile(&Lexer{Buffer: Code}))))
+	t2 := time.Now()
+
+	print("Compiling took " + t2.Sub(t1).String() + ".\n\n")
+	fmt.Println(code)
 }

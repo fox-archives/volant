@@ -369,7 +369,7 @@ func (lexer *Lexer) lexString() Token {
 
 	lexer.eatLastByte() // eat '"'
 	str = append(str, '"')
-	return Token{PrimaryType: StringLiteral, SecondaryType: SecondaryNullType, Size: size, Buff: str, Line: line, Column: column}
+	return Token{PrimaryType: StringLiteral, SecondaryType: SecondaryNullType, Flags: size, Buff: str, Line: line, Column: column}
 }
 
 func (lexer *Lexer) lexWord() Token {

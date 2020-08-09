@@ -56,7 +56,6 @@ func (parser *Parser) expect(primary PrimaryTokenType, secondary SecondaryTokenT
 		}
 	} else {
 		if token.PrimaryType != primary || token.SecondaryType != secondary {
-			// Error: expected {primary, secondary}, got {token}
 			NewError(SyntaxError, "expected "+PrimaryTypes[primary]+" and "+SecondaryTypes[secondary]+", got "+token.Serialize(), token.Line, token.Column)
 		}
 	}
@@ -173,6 +172,7 @@ func (parser *Parser) parseTypeArray() []Type {
 	types := []Type{}
 
 	if token := parser.ReadToken(); token.PrimaryType == RightParen {
+		types = append(types, VoidType)
 		return types
 	}
 
@@ -215,7 +215,7 @@ func (parser *Parser) parseFunctionType() FuncType {
 	parser.expect(LeftParen, SecondaryNullType)
 	parser.eatLastToken()
 
-	function.Args = parser.parseTypeArray()
+	function.ArgTypes = parser.parseTypeArray()
 
 	parser.expect(RightParen, SecondaryNullType)
 	parser.eatLastToken()
@@ -230,6 +230,8 @@ func (parser *Parser) parseFunctionType() FuncType {
 		parser.eatLastToken()
 	} else if token.PrimaryType != Comma && token.PrimaryType != SemiColon && token.SecondaryType != Equal && token.PrimaryType != RightParen {
 		function.ReturnTypes = []Type{parser.parseType()}
+	} else {
+		function.ReturnTypes = []Type{VoidType}
 	}
 
 	return function
@@ -550,13 +552,13 @@ func (parser *Parser) parseStatement() Statement {
 	switch parser.ReadToken().PrimaryType {
 	case IfKeyword:
 		parser.eatLastToken()
-		return parser.parseIfElse()
+		st = parser.parseIfElse()
 	case SwitchKeyword:
 		parser.eatLastToken()
-		return parser.parseSwitch()
+		st = parser.parseSwitch()
 	case ForKeyword:
 		parser.eatLastToken()
-		return parser.parseLoop()
+		st = parser.parseLoop()
 	case DeferKeyword:
 		parser.eatLastToken()
 		st = parser.parseDefer()
@@ -573,7 +575,7 @@ func (parser *Parser) parseStatement() Statement {
 		st = Continue{}
 	case DeleteKeyword:
 		parser.eatLastToken()
-		st = Delete{parser.parseExpressionArray()}
+		st = Delete{Exprs: parser.parseExpressionArray()}
 	default:
 		parser.fork(0)
 		expr := parser.parseExpression()
@@ -649,17 +651,17 @@ func (parser *Parser) parseCompoundLiteral() CompoundLiteralData {
 			if next.PrimaryType == Identifier {
 				parser.eatLastToken()
 				state = 1
-			} else {
-				state = 2
+				break
 			}
+			state = 2
 		case 1:
 			if next.SecondaryType == Colon {
 				parser.moveToFork(2)
 				state = 3
-			} else {
-				parser.moveToFork(2)
-				state = 2
+				break
 			}
+			parser.moveToFork(2)
+			state = 2
 		case 2:
 			cl.Values = parser.parseExpressionArray()
 			c = false
@@ -799,39 +801,47 @@ func (parser *Parser) parseExpr(state int) Expression {
 		}
 		return Left
 	case 8: // unary */&/+/-/++/--/!/~
-		if token := parser.ReadToken(); token.PrimaryType == NewKeyword {
+		if token := parser.ReadToken(); token.SecondaryType == Mul || token.SecondaryType == And || token.SecondaryType == Not || token.SecondaryType == BitwiseNot || token.SecondaryType == Add || token.SecondaryType == Sub || token.SecondaryType == AddAdd || token.SecondaryType == SubSub {
 			parser.eatLastToken()
-			return HeapAlloc{parser.parseType()}
-		} else if token.SecondaryType == Add || token.SecondaryType == Sub || token.SecondaryType == AddAdd || token.SecondaryType == SubSub {
+			return UnaryExpr{Expr: parser.parseExpr(8), Op: token}
+		} else if token.PrimaryType == NewKeyword {
 			parser.eatLastToken()
-			return UnaryExpr{Op: token, Expr: parser.parseExpr(9)}
-		}
-
-		var expr Expression
-
-		if token := parser.ReadToken(); token.SecondaryType == Mul {
+			return HeapAlloc{Type: parser.parseType()}
+		} else if token.PrimaryType == CastKeyword {
 			parser.eatLastToken()
-			expr = UnaryExpr{Op: token, Expr: parser.parseExpr(9)}
-		} else if token.SecondaryType == And || token.SecondaryType == Not || token.SecondaryType == BitwiseNot {
+			parser.expect(LeftParen, SecondaryNullType)
 			parser.eatLastToken()
-			expr = UnaryExpr{Expr: parser.parseExpr(9), Op: token}
-		} else {
-			return parser.parseExpr(9)
-		}
-
-		for {
-			if token := parser.ReadToken(); token.SecondaryType == Mul {
-				parser.eatLastToken()
-				expr = UnaryExpr{Op: token, Expr: expr}
-			} else if token.SecondaryType == And || token.SecondaryType == Not || token.SecondaryType == BitwiseNot {
-				parser.eatLastToken()
-				expr = UnaryExpr{Expr: expr, Op: token}
-			} else {
-				break
+			Typ := parser.parseType()
+			parser.expect(RightParen, SecondaryNullType)
+			parser.eatLastToken()
+			if parser.ReadToken().PrimaryType != LeftParen {
+				return TypeCast{Type: Typ, Expr: parser.parseExpr(9)}
 			}
+			parser.eatLastToken()
+			Expr := parser.parseExpr(0)
+			parser.expect(RightParen, SecondaryNullType)
+			parser.eatLastToken()
+			return TypeCast{Type: Typ, Expr: Expr}
+		} else if token.PrimaryType == LenKeyword {
+			parser.eatLastToken()
+			parser.expect(LeftParen, SecondaryNullType)
+			parser.eatLastToken()
+			Expr := parser.parseExpr(0)
+			parser.expect(RightParen, SecondaryNullType)
+			parser.eatLastToken()
+			return LenExpr{Expr: Expr}
+		} else if token.PrimaryType == SizeKeyword {
+			parser.eatLastToken()
+			parser.expect(LeftParen, SecondaryNullType)
+			parser.eatLastToken()
+			Expr := parser.parseExpr(0)
+			parser.expect(RightParen, SecondaryNullType)
+			parser.eatLastToken()
+			return SizeExpr{Expr: Expr}
 		}
-		return expr
-	case 9: // function call, postfix ++/--, struct/array members, parenthesis
+
+		return parser.parseExpr(9)
+	case 9: // function call, postfix ++/--, struct/array members
 		expr := parser.parseExpr(10)
 
 		for {
@@ -840,10 +850,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 			if token.SecondaryType == AddAdd || token.SecondaryType == SubSub {
 				parser.eatLastToken()
 				expr = PostfixUnaryExpr{Op: token, Expr: expr}
-				break
-			}
-
-			if token.PrimaryType == LeftParen {
+			} else if token.PrimaryType == LeftParen {
 				parser.eatLastToken()
 
 				if parser.ReadToken().PrimaryType == RightParen {
@@ -851,13 +858,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 					expr = CallExpr{Function: expr, Args: []Expression{}}
 					continue
 				}
-
-				switch expr.(type) {
-				case Type:
-					expr = TypeCast{Expr: parser.parseExpr(0), Type: expr.(Type)}
-				default:
-					expr = CallExpr{Function: expr, Args: parser.parseExpressionArray()}
-				}
+				expr = CallExpr{Function: expr, Args: parser.parseExpressionArray()}
 
 				parser.expect(RightParen, SecondaryNullType)
 				parser.eatLastToken()
@@ -945,26 +946,26 @@ func (parser *Parser) parseExpr(state int) Expression {
 
 func (parser *Parser) parseFunctionExpr() FuncExpr {
 	function := FuncExpr{}
-	function.Type = FunctionType(0)
+	function.Type.Type = FunctionType(0)
 
 	// check for async/work/inline keyword
 	if token := parser.ReadToken(); token.PrimaryType == InlineKeyword {
-		function.Type = function.Type | InlineFunction
+		function.Type.Type = function.Type.Type | InlineFunction
 		parser.eatLastToken()
 	}
 
 	if token := parser.ReadToken(); token.PrimaryType == AsyncKeyword {
-		function.Type = function.Type | AsyncFunction
+		function.Type.Type = function.Type.Type | AsyncFunction
 		parser.eatLastToken()
 	} else if token.PrimaryType == WorkKeyword {
-		function.Type = function.Type | WorkFunction
+		function.Type.Type = function.Type.Type | WorkFunction
 		parser.eatLastToken()
 	} else {
-		function.Type = function.Type | OrdFunction
+		function.Type.Type = function.Type.Type | OrdFunction
 	}
 
 	if token := parser.ReadToken(); token.PrimaryType == InlineKeyword {
-		function.Type = function.Type | InlineFunction
+		function.Type.Type = function.Type.Type | InlineFunction
 		parser.eatLastToken()
 	}
 
@@ -972,7 +973,28 @@ func (parser *Parser) parseFunctionExpr() FuncExpr {
 	parser.expect(LeftParen, SecondaryNullType)
 	parser.eatLastToken()
 
-	function.Args = parser.parseFunctionArgs()
+	if token := parser.ReadToken(); token.PrimaryType == RightParen {
+		function.Type.ArgTypes = []Type{VoidType}
+	} else {
+		function.Type.ArgNames = append(function.Type.ArgNames, parser.expect(Identifier, SecondaryNullType))
+		parser.eatLastToken()
+
+		parser.expect(PrimaryNullType, Colon)
+		parser.eatLastToken()
+
+		function.Type.ArgTypes = append(function.Type.ArgTypes, parser.parseType())
+
+		for token := parser.ReadToken(); token.PrimaryType == Comma; token = parser.ReadToken() {
+			parser.eatLastToken()
+			function.Type.ArgNames = append(function.Type.ArgNames, parser.expect(Identifier, SecondaryNullType))
+			parser.eatLastToken()
+
+			parser.expect(PrimaryNullType, Colon)
+			parser.eatLastToken()
+
+			function.Type.ArgTypes = append(function.Type.ArgTypes, parser.parseType())
+		}
+	}
 
 	parser.expect(RightParen, SecondaryNullType)
 	parser.eatLastToken()
@@ -980,12 +1002,12 @@ func (parser *Parser) parseFunctionExpr() FuncExpr {
 	// parse return types
 	if token := parser.ReadToken(); token.PrimaryType == LeftParen {
 		parser.eatLastToken()
-		function.ReturnTypes = parser.parseTypeArray()
+		function.Type.ReturnTypes = parser.parseTypeArray()
 
 		parser.expect(RightParen, SecondaryNullType)
 		parser.eatLastToken()
 	} else if token.PrimaryType != LeftCurlyBrace {
-		function.ReturnTypes = []Type{parser.parseType()}
+		function.Type.ReturnTypes = []Type{parser.parseType()}
 	}
 
 	// parse code block
@@ -1011,117 +1033,42 @@ func (parser *Parser) parseFunctionExprOrType() Expression {
 	}
 }
 
-func (parser *Parser) parseFunctionArgs() []ArgStruct {
-	args := []ArgStruct{}
-
-	if token := parser.ReadToken(); token.PrimaryType == RightParen {
-		return args
-	}
-
-	args = append(args, parser.parseFunctionArg())
-
-	for token := parser.ReadToken(); token.PrimaryType == Comma; token = parser.ReadToken() {
-		parser.eatLastToken()
-		args = append(args, parser.parseFunctionArg())
-	}
-	return args
-}
-
-func (parser *Parser) parseFunctionArg() ArgStruct {
-	arg := ArgStruct{}
-
-	arg.Identifier = parser.expect(Identifier, SecondaryNullType)
-	parser.eatLastToken()
-
-	parser.expect(PrimaryNullType, Colon)
-	parser.eatLastToken()
-
-	arg.Type = parser.parseType()
-	return arg
-}
-
 func (parser *Parser) parseTypeAHH(state int) Type {
 	switch state {
-	case 0: // arrays [num1][num2]...
-		var Typ Type
-
-		if parser.ReadToken().PrimaryType == LeftBrace {
-			parser.eatLastToken()
-
-			if parser.ReadToken().PrimaryType == RightBrace {
-				parser.eatLastToken()
-				Typ = ImplictArrayType{parser.parseTypeAHH(0)}
-			} else {
-				size := parser.expect(NumberLiteral, SecondaryNullType)
-				parser.eatLastToken()
-				parser.expect(RightBrace, SecondaryNullType)
-				parser.eatLastToken()
-				Typ = ArrayType{Size: size, BaseType: parser.parseTypeAHH(0)}
-			}
-		} else {
+	case 0: // arrays
+		if parser.ReadToken().PrimaryType != LeftBrace {
 			return parser.parseTypeAHH(1)
 		}
 
-		for parser.ReadToken().PrimaryType == LeftBrace {
-			parser.eatLastToken()
+		parser.eatLastToken()
 
-			if parser.ReadToken().PrimaryType == RightBrace {
-				Typ = ImplictArrayType{Typ}
-			} else {
-				Typ = ArrayType{Size: parser.expect(NumberLiteral, SecondaryNullType), BaseType: Typ}
-				parser.eatLastToken()
-			}
-			parser.expect(RightBrace, SecondaryNullType)
+		if parser.ReadToken().PrimaryType == RightBrace {
 			parser.eatLastToken()
+			return ImplictArrayType{parser.parseTypeAHH(0)}
 		}
 
-		return Typ
-	case 1: // '*'
-		var Typ Type
+		size := parser.expect(NumberLiteral, SecondaryNullType)
+		parser.eatLastToken()
 
-		if parser.ReadToken().SecondaryType == Mul {
-			parser.eatLastToken()
-			Typ = PointerType{parser.parseTypeAHH(0)}
-		} else {
+		parser.expect(RightBrace, SecondaryNullType)
+		parser.eatLastToken()
+
+		return ArrayType{Size: size, BaseType: parser.parseTypeAHH(0)}
+	case 1: // '*'
+		if parser.ReadToken().SecondaryType != Mul {
 			return parser.parseTypeAHH(2)
 		}
-
-		for parser.ReadToken().SecondaryType == Mul {
-			parser.eatLastToken()
-			Typ = PointerType{Typ}
-		}
-
-		return Typ
+		parser.eatLastToken()
+		return PointerType{parser.parseTypeAHH(0)}
 	case 2: // const/dynamic keyword
-		var Typ Type
-
-		token := parser.ReadToken()
-
-		if token.PrimaryType == DynamicKeyword {
+		if token := parser.ReadToken(); token.PrimaryType == DynamicKeyword {
 			parser.eatLastToken()
-			Typ = DynamicType{parser.parseTypeAHH(0)}
+			return DynamicType{parser.parseTypeAHH(0)}
 		} else if token.PrimaryType == ConstKeyword {
 			parser.eatLastToken()
-			Typ = ConstType{parser.parseTypeAHH(0)}
-		} else {
-			return parser.parseTypeAHH(3)
+			return ConstType{parser.parseTypeAHH(0)}
 		}
-
-		for {
-			token := parser.ReadToken()
-
-			if token.PrimaryType == DynamicKeyword {
-				parser.eatLastToken()
-				Typ = DynamicType{Typ}
-			} else if token.PrimaryType == ConstKeyword {
-				parser.eatLastToken()
-				Typ = ConstType{Typ}
-			} else {
-				break
-			}
-		}
-
-		return Typ
+		return parser.parseTypeAHH(3)
 	case 3:
 		token := parser.ReadToken()
 
@@ -1135,6 +1082,9 @@ func (parser *Parser) parseTypeAHH(state int) Type {
 		case StructKeyword:
 			parser.eatLastToken()
 			return parser.parseStructType()
+		case EnumKeyword:
+			parser.eatLastToken()
+			return parser.parseEnumType()
 		case LeftParen:
 			parser.eatLastToken()
 			Typ := parser.parseTypeAHH(0)

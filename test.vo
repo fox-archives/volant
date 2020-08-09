@@ -103,8 +103,10 @@ main: func() i32 = func() i32 {
 }
 
 */
+o: [10]***func(int) **int;
 
-typedef integer i32
+typedef haha [100]u16;
+typedef haa u8
 
 function := func () dynamic dynamic dynamic []i32 {
     nums := new dynamic dynamic []i32;
@@ -119,10 +121,27 @@ function := func () dynamic dynamic dynamic []i32 {
 main := func() i32 {
     printf("haha I wont decay to pointer.\n");
     nums := function();
+    numsptr := &nums;
 
+    printf("Length of nums is %zu. Size of nums is %zu.\n", len(nums), size(nums));
     delete nums[0][0], nums[0], nums
+    
     printf("haha I'll decay to pointer. %i.\n", function()[0][0][0]);
 
-    printf("Kakak.a is %i.\n", Kakak.a);
-	return 0
+    printf("Kakak.a is %i.\n", cast(int)Kakak.a);
+    
+    str := "hehehe"
+    printf("hehe is %s.\n", str)
+
+    dynStrs: [1]dynamic []u8 = [new [7]u8]
+
+    memcpy(&dynStrs[0][0], str, 7);
+    printf("dynamic string is %s.\n", &dynStrs[0][0]);
+
+    x: [100]i32;
+
+    printf("Length of x is %zu. Size of x is %zu.\n", len(x), size(x));
+    printf("Length of a is %zu. Size of a is %zu.\n", len(o), size(o));
+
+    return 0
 };

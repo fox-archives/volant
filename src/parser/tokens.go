@@ -9,8 +9,8 @@ type PrimaryTokenType byte
 type SecondaryTokenType byte
 
 // The numbers here are just to keep values different, they dont mean anything specific
-
 // Primary token type
+
 const (
 	PrimaryNullType PrimaryTokenType = 0
 
@@ -64,6 +64,9 @@ const (
 	DynamicKeyword  PrimaryTokenType = 121
 	DeleteKeyword   PrimaryTokenType = 122
 	TypedefKeyword  PrimaryTokenType = 123
+	CastKeyword     PrimaryTokenType = 124
+	LenKeyword      PrimaryTokenType = 125
+	SizeKeyword     PrimaryTokenType = 126
 
 	// the parser stops parsing when it receives either of these types and shows the correct error message
 	EOF        PrimaryTokenType = 254
@@ -162,6 +165,9 @@ var Keywords = map[string]PrimaryTokenType{
 	"dynamic":  DynamicKeyword,
 	"delete":   DeleteKeyword,
 	"typedef":  TypedefKeyword,
+	"cast":     CastKeyword,
+	"len":      LenKeyword,
+	"size":     SizeKeyword,
 	// more stuff
 }
 
@@ -172,7 +178,7 @@ type Token struct {
 	Buff          []byte
 	Line          int
 	Column        int
-	Size          int
+	Flags         int
 }
 
 // --------------------------------------------
@@ -286,6 +292,6 @@ var SecondaryTypes map[SecondaryTokenType]string = map[SecondaryTokenType]string
 }
 
 // Serialize serializes a token
-func (token *Token) Serialize() string {
+func (token Token) Serialize() string {
 	return "{\n\tPrimaryType:\t" + PrimaryTypes[token.PrimaryType] + ",\n\tSecondaryType:\t" + SecondaryTypes[token.SecondaryType] + ",\n\tValue:\t" + string(token.Buff) + "\n\tLine:\t" + strconv.Itoa(token.Line) + "\n\tColumn:\t" + strconv.Itoa(token.Column) + "\n},"
 }
