@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	. "parser"
-	. "semanticAnalyzer"
 )
 
 func main() {

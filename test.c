@@ -36,16 +36,24 @@ typedef struct {
 
 size_t size = sizeof(char[10]);
 
+#define v_printf printf
+
+int v_main();
+
+int main() {
+	return v_main();
+}
+
 typedef struct {
-	i32 a;
-	i32 b;
+	i32 v_a;
+	i32 v_b;
 } Kaka;
 
 typedef enum {
-	a = 0,
-	b,
-	c,
-	d,
+	enum_Kakak_a = 0,
+	enum_Kakak_b,
+	enum_Kakak_c,
+	enum_Kakak_d,
 } Kakak;
 
 typedef struct {
@@ -54,25 +62,26 @@ typedef struct {
 } Kakakak;
 
 typedef i32 integer;
-__mem_block function(){
-	__mem_block nums = new(__mem_block,__mem_block);
+__mem_block v_function(){
+	__mem_block v_nums = new(__mem_block,__mem_block);
 
-	((__mem_block*)(nums._ptr))[0] = new(__mem_block,i32);
+	((__mem_block*)(v_nums._ptr))[0] = new(__mem_block,i32);
 
-	((__mem_block*)(((__mem_block*)(nums._ptr))[0]._ptr))[0] = new(i32[10],i32);
+	((__mem_block*)(((__mem_block*)(v_nums._ptr))[0]._ptr))[0] = new(i32[10],i32);
 
-	((i32*)(((__mem_block*)(((__mem_block*)(nums._ptr))[0]._ptr))[0]._ptr))[0] = 269488144;
+	((i32*)(((__mem_block*)(((__mem_block*)(v_nums._ptr))[0]._ptr))[0]._ptr))[0] = 269488144;
 
-	return nums;
+	return v_nums;
 }
-i32 main(){
-	printf("haha I wont decay to pointer.\n");
-	__mem_block nums = function();
+i32 v_main(){
+	v_printf("haha I wont decay to pointer.\n");
+	__mem_block v_nums = v_function();
 
-	delete(((__mem_block*)(((__mem_block*)(nums._ptr))[0]._ptr))[0]);
-	delete(((__mem_block*)(nums._ptr))[0]);
-	delete(nums);
+	delete(((__mem_block*)(((__mem_block*)(v_nums._ptr))[0]._ptr))[0]);
+	delete(((__mem_block*)(v_nums._ptr))[0]);
+	delete(v_nums);
 
-	printf("haha I'll decay to pointer. %i.\n", ((i32*)(((__mem_block*)(((__mem_block*)(function()._ptr))[0]._ptr))[0]._ptr))[0]);
-	printf("Kakak.a is %i.\n", a);
+	v_printf("haha I'll decay to pointer. %i.\n", ((i32*)(((__mem_block*)(((__mem_block*)(v_function()._ptr))[0]._ptr))[0]._ptr))[0]);
+	v_printf("Kakak.a is %i.\n", enum_Kakak_a);
+	return 0;
 }

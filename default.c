@@ -35,3 +35,11 @@ typedef struct {
 } __mem_block;
 
 size_t size = sizeof(char[10]);
+
+#define v_printf printf
+
+int v_main();
+
+int main() {
+	return v_main();
+}

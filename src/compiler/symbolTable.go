@@ -1,4 +1,4 @@
-package SemanticAnalyzer
+package compiler
 
 import (
 	"bytes"

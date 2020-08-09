@@ -1,4 +1,4 @@
-package SemanticAnalyzer
+package compiler
 
 import (
 	. "parser"
@@ -77,6 +77,9 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 
 func (s *SemanticAnalyzer) enum(enum EnumTypedef) EnumTypedef {
 	s.addSymbol(enum.Name, enum)
+	for i, ident := range enum.Type.Identifiers {
+		enum.Type.Identifiers[i].Buff = getEnumPropName(enum.Name.Buff, ident.Buff)
+	}
 	return enum
 }
 
@@ -127,7 +130,9 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 		if s.getSymbol(Ident) != nil {
 			NewError(SyntaxError, string(Ident.Buff)+" has already been declared.", Ident.Line, Ident.Column)
 		} else {
-			s.addSymbol(Ident, dec.Types[i])
+			NewIdent := getVarName(Ident)
+			s.addSymbol(NewIdent, dec.Types[i])
+			dec.Identifiers[i] = NewIdent
 		}
 	}
 
@@ -160,6 +165,8 @@ func (s *SemanticAnalyzer) expr(expr Expression) Expression {
 	expr2 := expr
 
 	switch expr.(type) {
+	case IdentExpr:
+		expr2 = IdentExpr{Value: getVarName(expr.(IdentExpr).Value)}
 	case UnaryExpr:
 		expr2 = UnaryExpr{Op: expr.(UnaryExpr).Op, Expr: s.expr(expr.(UnaryExpr).Expr)}
 	case BinaryExpr:
@@ -195,7 +202,22 @@ func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
 
 	switch Typ.(type) {
 	case EnumTypedef:
-		return expr.Expr
+
+		switch expr.Expr.(type) {
+		case IdentExpr:
+			break;
+		default:
+			// NewError(SyntaxError, "Expected identifier, got expression", )
+		}
+		return IdentExpr{
+			Value: Token{
+				Buff: getEnumPropName(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value.Buff),
+				PrimaryType: Identifier,
+				SecondaryType: SecondaryNullType,
+				Line: expr.Expr.(IdentExpr).Value.Line,
+				Column: expr.Expr.(IdentExpr).Value.Line,
+			},
+		}
 	default:
 		return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
 	}
@@ -283,6 +305,10 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 		}
 	case IdentExpr:
 		symbol := s.getSymbol(expr.(IdentExpr).Value)
+		if symbol != nil {
+			return symbol.Type
+		}
+		symbol = s.getSymbol(getVarName(expr.(IdentExpr).Value))
 		if symbol != nil {
 			return symbol.Type
 		}
