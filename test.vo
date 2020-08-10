@@ -143,5 +143,8 @@ main := func() i32 {
     printf("Length of x is %zu. Size of x is %zu.\n", len(x), size(x));
     printf("Length of a is %zu. Size of a is %zu.\n", len(o), size(o));
 
+    tupl := (Kakakak){0, 1};
+    printf("tupl[0] is %i. tupl[1] is %i\n", tupl[0+8], tupl[1])
+    
     return 0
 };

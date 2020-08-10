@@ -105,12 +105,6 @@ func (c *Compiler) globalStatement(stmt Statement) {
 		c.globalDeclaration(stmt.(Declaration))
 	case Switch:
 		c.swtch(stmt.(Switch))
-	case StructTypedef:
-		c.structTypedef(stmt.(StructTypedef))
-	case EnumTypedef:
-		c.enumTypedef(stmt.(EnumTypedef))
-	case TupleTypedef:
-		c.tupleTypedef(stmt.(TupleTypedef))
 	case Typedef:
 		c.typedef(stmt.(Typedef))
 	case NullStatement:
@@ -158,14 +152,9 @@ func (c *Compiler) statement(stmt Statement) {
 func (c *Compiler) typedef(typedef Typedef) {
 	c.append([]byte("typedef"))
 	c.space()
-
-	switch typedef.Type.(type) {
-	case FuncType:
-		c.declarationType(typedef.Type, typedef.Name)
-	default:
-		c.declarationType(typedef.Type, typedef.Name)
-	}
+	c.declarationType(typedef.Type, typedef.Name)
 	c.semicolon()
+	c.newline()
 }
 
 func (c *Compiler) delete(delete Delete) {
@@ -438,43 +427,6 @@ func (c *Compiler) functionCall(call CallExpr) {
 	c.closeParen()
 }
 
-func (c *Compiler) Typ(Typ Type) {
-	switch Typ.(type) {
-	case BasicType:
-		c.expression(Typ.(BasicType).Expr)
-	case PointerType:
-		c.Type(Typ.(PointerType).BaseType)
-		c.append([]byte("*"))
-	case ConstType:
-		c.Type(Typ.(ConstType).BaseType)
-		c.space()
-		c.append([]byte("const"))
-	case ArrayType:
-		c.Type(Typ.(ArrayType).BaseType)
-		switch Typ.(ArrayType).BaseType.(type) {
-		case DynamicType:
-			break
-		default:
-			c.openBrace()
-			c.identifier(Typ.(ArrayType).Size)
-			c.closeBrace()
-		}
-	case ImplictArrayType:
-		c.Type(Typ.(ImplictArrayType).BaseType)
-		switch Typ.(ImplictArrayType).BaseType.(type) {
-		case DynamicType:
-			break
-		default:
-			c.openBrace()
-			c.closeBrace()
-		}
-	case FuncType:
-
-	case DynamicType:
-		c.append([]byte("__mem_block"))
-	}
-}
-
 func (c *Compiler) declarationType(Typ Type, Name Token) {
 	typ := Typ
 	sizes := []Token{}
@@ -545,6 +497,18 @@ func (c *Compiler) declarationType(Typ Type, Name Token) {
 			}
 
 			c.closeParen()
+		case StructType:
+			c.strct(typ.(StructType))
+			c.space()
+			c.identifier(Name)
+		case EnumType:
+			c.enum(typ.(EnumType))
+			c.space()
+			c.identifier(Name)
+		case TupleType:
+			c.tupl(typ.(TupleType))
+			c.space()
+			c.identifier(Name)
 		default:
 			c.Type(typ)
 			c.space()
@@ -632,9 +596,12 @@ func (c *Compiler) Type(Typ Type) {
 			c.Type(typ.(PointerType).BaseType)
 			c.space()
 			c.append([]byte("*"))
-		default:
-			c.Type(typ)
-			c.space()
+		case StructType:
+			c.strct(typ.(StructType))
+		case EnumType:
+			c.enum(typ.(EnumType))
+		case TupleType:
+			c.tupl(typ.(TupleType))
 		}
 
 		for i := 0; i < pointers; i++ {
@@ -758,32 +725,28 @@ func (c *Compiler) swtch(swtch Switch) {
 	}
 }
 
-func (c *Compiler) structTypedef(st StructTypedef) {
-	c.append([]byte("typedef struct {"))
-	c.newline()
+func (c *Compiler) strct(typ StructType) {
+	c.append([]byte("struct "))
+	c.openCurlyBrace()
 	c.pushScope()
-
-	for _, prop := range st.Type.Props {
+	c.newline()
+	for _, prop := range typ.Props {
 		c.globalDeclaration(prop)
 	}
-
 	c.popScope()
+	c.indent()
 	c.closeCurlyBrace()
-	c.space()
-	c.identifier(st.Identifier)
-	c.semicolon()
-	c.newline()
 }
 
-func (c *Compiler) enumTypedef(en EnumTypedef) {
-	c.append([]byte("typedef enum {"))
+func (c *Compiler) enum(en EnumType) {
+	c.append([]byte("enum {"))
 	c.newline()
 	c.pushScope()
 
-	for x, prop := range en.Type.Identifiers {
+	for x, prop := range en.Identifiers {
 		c.indent()
 		c.identifier(prop)
-		val := en.Type.Values[x]
+		val := en.Values[x]
 
 		if val != nil {
 			c.space()
@@ -797,18 +760,14 @@ func (c *Compiler) enumTypedef(en EnumTypedef) {
 
 	c.popScope()
 	c.closeCurlyBrace()
-	c.space()
-	c.identifier(en.Name)
-	c.semicolon()
-	c.newline()
 }
 
-func (c *Compiler) tupleTypedef(en TupleTypedef) {
-	c.append([]byte("typedef struct {"))
+func (c *Compiler) tupl(tupl TupleType) {
+	c.append([]byte("struct {"))
 	c.newline()
 	c.pushScope()
 
-	for x, prop := range en.Type.Types {
+	for x, prop := range tupl.Types {
 		c.indent()
 		c.declarationType(prop, Token{
 			Buff:        []byte("_" + strconv.Itoa(x)),
@@ -820,10 +779,6 @@ func (c *Compiler) tupleTypedef(en TupleTypedef) {
 
 	c.popScope()
 	c.closeCurlyBrace()
-	c.space()
-	c.identifier(en.Identifier)
-	c.semicolon()
-	c.newline()
 }
 
 func (c *Compiler) heapAlloc(expr HeapAlloc) {

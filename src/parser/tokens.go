@@ -52,7 +52,6 @@ const (
 	CaseKeyword     PrimaryTokenType = 109
 	AsyncKeyword    PrimaryTokenType = 110
 	WorkKeyword     PrimaryTokenType = 111
-	InlineKeyword   PrimaryTokenType = 112
 	ImportKeyword   PrimaryTokenType = 113
 	DeferKeyword    PrimaryTokenType = 114
 	ReturnKeyword   PrimaryTokenType = 115
@@ -151,7 +150,6 @@ var Keywords = map[string]PrimaryTokenType{
 	"struct":   StructKeyword,
 	"async":    AsyncKeyword,
 	"work":     WorkKeyword,
-	"inline":   InlineKeyword,
 	"import":   ImportKeyword,
 	"defer":    DeferKeyword,
 	"func":     FunctionKeyword,
@@ -227,7 +225,6 @@ var PrimaryTypes map[PrimaryTokenType]string = map[PrimaryTokenType]string{
 	CaseKeyword:     "CaseKeyword",
 	AsyncKeyword:    "AsyncKeyword",
 	WorkKeyword:     "WorkKeyword",
-	InlineKeyword:   "InlineKeyword",
 	ImportKeyword:   "ImportKeyowrd",
 
 	EOF:        "EOF",

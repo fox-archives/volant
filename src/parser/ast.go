@@ -4,10 +4,9 @@ type FunctionType byte
 
 // Never change these numbers, they are very sepcific
 const (
-	OrdFunction    FunctionType = 1
-	AsyncFunction  FunctionType = 2
-	WorkFunction   FunctionType = 4
-	InlineFunction FunctionType = 8
+	OrdFunction   FunctionType = 1
+	AsyncFunction FunctionType = 2
+	WorkFunction  FunctionType = 3
 )
 
 type LoopType byte

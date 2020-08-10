@@ -102,12 +102,12 @@ func (parser *Parser) parseTypedef() Typedef {
 	return Typedef{Name: Name, Type: parser.parseType()}
 }
 
-func (parser *Parser) parseStructTypedef(allowUnnamed bool) StructTypedef {
-	strct := StructTypedef{}
+func (parser *Parser) parseStructTypedef(allowUnnamed bool) Typedef {
+	strct := Typedef{}
 
 	if token := parser.ReadToken(); token.PrimaryType == Identifier {
 		parser.eatLastToken()
-		strct.Identifier = token
+		strct.Name = token
 	} else if !allowUnnamed {
 		// Error: expected identifier, got {token}
 	}
@@ -116,12 +116,12 @@ func (parser *Parser) parseStructTypedef(allowUnnamed bool) StructTypedef {
 	return strct
 }
 
-func (parser *Parser) parseTupleTypedef(allowUnnamed bool) Statement {
-	tupl := TupleTypedef{}
+func (parser *Parser) parseTupleTypedef(allowUnnamed bool) Typedef {
+	tupl := Typedef{}
 
 	if token := parser.ReadToken(); token.PrimaryType == Identifier {
 		parser.eatLastToken()
-		tupl.Identifier = token
+		tupl.Name = token
 	} else if !allowUnnamed {
 		// Error: expected identifier, got {token}
 	}
@@ -130,8 +130,8 @@ func (parser *Parser) parseTupleTypedef(allowUnnamed bool) Statement {
 	return tupl
 }
 
-func (parser *Parser) parseEnumTypedef() EnumTypedef {
-	enum := EnumTypedef{}
+func (parser *Parser) parseEnumTypedef() Typedef {
+	enum := Typedef{}
 
 	enum.Name = parser.expect(Identifier, SecondaryNullType)
 	parser.eatLastToken()
@@ -190,25 +190,15 @@ func (parser *Parser) parseFunctionType() FuncType {
 	function := FuncType{}
 	function.Type = FunctionType(0)
 
-	// check for async/work/inline keyword
-	if token := parser.ReadToken(); token.PrimaryType == InlineKeyword {
-		function.Type = function.Type | InlineFunction
-		parser.eatLastToken()
-	}
-
+	// check for async/work keyword
 	if token := parser.ReadToken(); token.PrimaryType == AsyncKeyword {
-		function.Type = function.Type | AsyncFunction
+		function.Type = AsyncFunction
 		parser.eatLastToken()
 	} else if token.PrimaryType == WorkKeyword {
-		function.Type = function.Type | WorkFunction
+		function.Type = WorkFunction
 		parser.eatLastToken()
 	} else {
 		function.Type = OrdFunction
-	}
-
-	if token := parser.ReadToken(); token.PrimaryType == InlineKeyword {
-		function.Type = function.Type | InlineFunction
-		parser.eatLastToken()
 	}
 
 	// parse arguments
@@ -949,24 +939,14 @@ func (parser *Parser) parseFunctionExpr() FuncExpr {
 	function.Type.Type = FunctionType(0)
 
 	// check for async/work/inline keyword
-	if token := parser.ReadToken(); token.PrimaryType == InlineKeyword {
-		function.Type.Type = function.Type.Type | InlineFunction
-		parser.eatLastToken()
-	}
-
 	if token := parser.ReadToken(); token.PrimaryType == AsyncKeyword {
-		function.Type.Type = function.Type.Type | AsyncFunction
+		function.Type.Type = AsyncFunction
 		parser.eatLastToken()
 	} else if token.PrimaryType == WorkKeyword {
-		function.Type.Type = function.Type.Type | WorkFunction
+		function.Type.Type = WorkFunction
 		parser.eatLastToken()
 	} else {
-		function.Type.Type = function.Type.Type | OrdFunction
-	}
-
-	if token := parser.ReadToken(); token.PrimaryType == InlineKeyword {
-		function.Type.Type = function.Type.Type | InlineFunction
-		parser.eatLastToken()
+		function.Type.Type = OrdFunction
 	}
 
 	// parse arguments

@@ -54,10 +54,6 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 	switch stmt.(type) {
 	case Typedef:
 		return s.typedef(stmt.(Typedef))
-	case EnumTypedef:
-		return s.enum(stmt.(EnumTypedef))
-	case StructTypedef:
-		return s.strct(stmt.(StructTypedef))
 	case Declaration:
 		return s.declaration(stmt.(Declaration))
 	case Block:
@@ -75,11 +71,10 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 	return stmt
 }
 
-func (s *SemanticAnalyzer) enum(enum EnumTypedef) EnumTypedef {
-	s.addSymbol(enum.Name, enum)
+func (s *SemanticAnalyzer) enum(enum EnumType, Name Token) EnumType {
 	s.pushScope()
-	for i, Ident := range enum.Type.Identifiers {
-		enum.Type.Identifiers[i] = getEnumProp(enum.Name.Buff, Ident)
+	for i, Ident := range enum.Identifiers {
+		enum.Identifiers[i] = getEnumProp(Name.Buff, Ident)
 	}
 	s.popScope()
 	return enum
@@ -87,7 +82,21 @@ func (s *SemanticAnalyzer) enum(enum EnumTypedef) EnumTypedef {
 
 func (s *SemanticAnalyzer) typedef(typedef Typedef) Typedef {
 	s.addSymbol(typedef.Name, typedef)
-	return Typedef{Type: typedef.Type, Name: getNewVarName(typedef.Name)}
+
+	Typ := typedef.Type
+
+	switch typedef.Type.(type) {
+	case StructType:
+		Typ = s.strct(Typ.(StructType))
+	case EnumType:
+		Typ = s.enum(Typ.(EnumType), typedef.Name)
+		/*
+			case TupleType:
+			return s.tupl(Typ.(TupleType))
+		*/
+	}
+
+	return Typedef{Type: Typ, Name: getNewVarName(typedef.Name)}
 }
 
 func (s *SemanticAnalyzer) delete(delete Delete) Delete {
@@ -119,6 +128,9 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 			dec.Types = append(dec.Types, Type)
 		}
 	} else if len(dec.Types) == 0 {
+		if len(dec.Values) == 0 {
+			NewError(SyntaxError, "Cannot declare a variable without type and value.", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
+		}
 		for _, Val := range dec.Values {
 			dec.Types = append(dec.Types, s.getType(Val))
 		}
@@ -153,11 +165,10 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 	return dec
 }
 
-func (s *SemanticAnalyzer) strct(strct StructTypedef) StructTypedef {
-	s.addSymbol(strct.Identifier, strct.Type)
+func (s *SemanticAnalyzer) strct(strct StructType) StructType {
 	s.pushScope()
-	for i, prop := range strct.Type.Props {
-		strct.Type.Props[i] = s.declaration(prop)
+	for i, prop := range strct.Props {
+		strct.Props[i] = s.declaration(prop)
 	}
 	s.popScope()
 	return strct
@@ -191,44 +202,67 @@ func (s *SemanticAnalyzer) expr(expr Expression) Expression {
 		expr2 = s.lenExpr(expr.(LenExpr))
 	case SizeExpr:
 		expr2 = s.sizeExpr(expr.(SizeExpr))
+	case CompoundLiteral:
+		expr2 = CompoundLiteral{Name: s.expr(expr.(CompoundLiteral).Name), Data: expr.(CompoundLiteral).Data}
 	}
 
 	return expr2
 }
 
 func (s *SemanticAnalyzer) arrayMemberExpr(expr ArrayMemberExpr) Expression {
-	switch expr.Parent.(type) {
-	//case IdentExpr:
-	//	break
+	Typ := s.getType(expr)
+
+	switch Typ.(type) {
+	case BasicType:
+		break
 	default:
 		return ArrayMemberExpr{Parent: s.decayToPointer(s.expr(expr.Parent)), Index: s.expr(expr.Index)}
 	}
-	/*
-		name := expr.Parent.(IdentExpr)
-		symbol := s.getSymbol(name.value)
 
-		switch symbol.Type.(type) {
-		case TupleTypedef:
-			return UnaryExpr{
-				Op: Token{
-					Buff:          []byte("*"),
-					PrimaryType:   AirthmaticOperator,
-					SecondaryType: Mul,
-				},
-				Expr: BinaryExpr{
-					Left: name,
-					Op: Token{
-						Buff:          []byte("+"),
-						PrimaryType:   AirthmaticOperator,
-						SecondaryType: Add,
-					},
-					Right: OffsetExpr{
+	Typ = s.getType(Typ.(BasicType).Expr)
 
-					},
-				},
-			}
-		}
-	*/
+	if Typ == nil {
+		return ArrayMemberExpr{Parent: s.decayToPointer(s.expr(expr.Parent)), Index: s.expr(expr.Index)}
+	}
+
+	switch Typ.(type) {
+	case Typedef:
+		break
+	default:
+		return ArrayMemberExpr{Parent: s.decayToPointer(s.expr(expr.Parent)), Index: s.expr(expr.Index)}
+	}
+
+	switch Typ.(Typedef).Type.(type) {
+	case TupleType:
+		break
+	default:
+		return ArrayMemberExpr{Parent: s.decayToPointer(s.expr(expr.Parent)), Index: s.expr(expr.Index)}
+	}
+
+	switch expr.Index.(type) {
+	case BasicLit:
+		break
+	default:
+		NewError(SyntaxError, "Only number literals are allowed in tupl element reference.", 0, 0)
+	}
+
+	switch expr.Index.(BasicLit).Value.PrimaryType {
+	case NumberLiteral:
+		break
+	default:
+		NewError(SyntaxError, "Only number literals are allowed in tupl element reference.", 0, 0)
+	}
+
+	return MemberExpr{
+		Base: s.expr(expr.Parent),
+		Expr: IdentExpr{
+			Value: Token{
+				Buff:          []byte("_" + string(expr.Index.(BasicLit).Value.Buff)),
+				PrimaryType:   Identifier,
+				SecondaryType: SecondaryNullType,
+			},
+		},
+	}
 }
 
 func (s *SemanticAnalyzer) lenExpr(expr LenExpr) LenExpr {
@@ -242,28 +276,30 @@ func (s *SemanticAnalyzer) sizeExpr(expr SizeExpr) SizeExpr {
 }
 
 func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
-	switch expr.Base.(type) {
-	case IdentExpr:
+	Typ := s.getType(expr.Base)
+
+	switch Typ.(type) {
+	case Typedef:
 		break
 	default:
 		return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
 	}
 
-	Typ := s.getType(expr.Base)
-
-	switch Typ.(type) {
-	case EnumTypedef:
-
-		switch expr.Expr.(type) {
-		case IdentExpr:
-			break
-		default:
-			// NewError(SyntaxError, "Expected identifier, got expression", )
-		}
-		return IdentExpr{Value: getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
+	switch Typ.(Typedef).Type.(type) {
+	case EnumType:
+		break
 	default:
 		return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
 	}
+
+	switch expr.Expr.(type) {
+	case IdentExpr:
+		break
+	default:
+		// NewError(SyntaxError, "Expected identifier, got expression", )
+	}
+
+	return IdentExpr{Value: getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
 }
 
 func (s *SemanticAnalyzer) exprArray(array []Expression) []Expression {
@@ -407,6 +443,8 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 		default:
 			return DynamicType{BaseType: expr.(HeapAlloc).Type}
 		}
+	case CompoundLiteral:
+		return BasicType{Expr: s.expr(expr.(CompoundLiteral).Name)}
 	}
 
 	return BasicType{}
