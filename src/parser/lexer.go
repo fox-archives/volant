@@ -72,20 +72,23 @@ func (lexer *Lexer) skipSpaces() {
 }
 
 func (lexer *Lexer) skipUntilNewline() {
-	for next, _ := lexer.peek(); next != '\n'; next, _ = lexer.peek() {
+	for next, ok := lexer.peek(); ok && next != '\n'; next, _ = lexer.peek() {
 		lexer.eatLastByte()
 	}
 }
 
 func (lexer *Lexer) multilineComment() {
 	for next, _ := lexer.peek(); ; next, _ = lexer.peek() {
+		lexer.eatLastByte()
+		lexer.skipSpaces()
+
 		if next != '*' {
-			lexer.eatLastByte()
 			continue
 		}
-		lexer.eatLastByte()
 
-		if next2, _ := lexer.peek(); next2 != '/' {
+		if next2, ok := lexer.peek(); !ok {
+			NewError(SyntaxError, "Expected end of multiline comment, got eof.", lexer.Line, lexer.Column)
+		} else if next2 != '/' {
 			continue
 		}
 

@@ -116,7 +116,7 @@ func (c *Compiler) statement(stmt Statement) {
 	c.newline()
 	switch stmt.(type) {
 	case Declaration:
-		c.globalDeclaration(stmt.(Declaration))
+		c.declaration(stmt.(Declaration))
 	case Return:
 		c.rturn(stmt.(Return))
 	case IfElseBlock:
@@ -155,6 +155,10 @@ func (c *Compiler) typedef(typedef Typedef) {
 	c.declarationType(typedef.Type, typedef.Name)
 	c.semicolon()
 	c.newline()
+	switch typedef.Type.(type) {
+	case StructType:
+		c.strctDefault(typedef)
+	}
 }
 
 func (c *Compiler) delete(delete Delete) {
@@ -222,31 +226,46 @@ func (c *Compiler) globalDeclaration(dec Declaration) {
 	hasValues := len(dec.Values) > 0
 
 	for i, Var := range dec.Identifiers {
-		switch dec.Types[i].(type) {
-		case FuncType:
-			c.indent()
-			c.declarationType(dec.Types[i], Var)
+		c.append([]byte("static"))
+		c.space()
+		c.declarationType(dec.Types[i], Var)
 
-			if hasValues {
+		if hasValues {
+			switch dec.Types[i].(type) {
+			case FuncType:
 				c.block(dec.Values[i].(FuncExpr).Block)
-			}
-
-			c.semicolon()
-			c.newline()
-		default:
-			c.indent()
-			c.declarationType(dec.Types[i], Var)
-
-			if hasValues {
+			default:
 				c.space()
 				c.equal()
 				c.space()
 				c.expression(dec.Values[i])
 			}
-
-			c.semicolon()
-			c.newline()
 		}
+		c.semicolon()
+		c.newline()
+	}
+}
+
+func (c *Compiler) declaration(dec Declaration) {
+	hasValues := len(dec.Values) > 0
+
+	for i, Var := range dec.Identifiers {
+		c.indent()
+		c.declarationType(dec.Types[i], Var)
+
+		if hasValues {
+			switch dec.Types[i].(type) {
+			case FuncType:
+				c.block(dec.Values[i].(FuncExpr).Block)
+			default:
+				c.space()
+				c.equal()
+				c.space()
+				c.expression(dec.Values[i])
+			}
+		}
+		c.semicolon()
+		c.newline()
 	}
 }
 
@@ -725,17 +744,80 @@ func (c *Compiler) swtch(swtch Switch) {
 	}
 }
 
+func (c *Compiler) strctPropDeclaration(dec Declaration) {
+	for i, Var := range dec.Identifiers {
+		c.indent()
+
+		switch dec.Types[i].(type) {
+		case FuncType:
+			break
+		default:
+			c.declarationType(dec.Types[i], Var)
+		}
+
+		c.semicolon()
+		c.newline()
+	}
+}
+
 func (c *Compiler) strct(typ StructType) {
 	c.append([]byte("struct "))
 	c.openCurlyBrace()
 	c.pushScope()
 	c.newline()
 	for _, prop := range typ.Props {
-		c.globalDeclaration(prop)
-	}
+		c.strctPropDeclaration(prop)
+	} /*
+		for _, superStructType := range typ.SuperStructTypes {
+			for _, prop := range superStructType.Props {
+				c.strctPropDeclaration(prop)
+			}
+		}*/
 	c.popScope()
 	c.indent()
 	c.closeCurlyBrace()
+}
+
+func (c *Compiler) strctDefault(strct Typedef) {
+	c.identifier(strct.Name)
+	c.space()
+	c.identifier(getStrctDefaultName(getActualName(strct.Name)))
+
+	c.space()
+	c.equal()
+	c.space()
+
+	c.openParen()
+	c.identifier(strct.Name)
+	c.closeParen()
+
+	c.openCurlyBrace()
+	for _, prop := range strct.Type.(StructType).Props {
+		if len(prop.Values) == 0 {
+			break
+		}
+
+		for x, Ident := range prop.Identifiers {
+			Val := prop.Values[x]
+
+			switch Val.(type) {
+			case FuncExpr:
+				break
+			default:
+				c.dot()
+				c.identifier(Ident)
+				c.space()
+				c.equal()
+				c.space()
+				c.expression(prop.Values[x])
+				c.comma()
+				c.space()
+			}
+		}
+	}
+	c.closeCurlyBrace()
+	c.semicolon()
+	c.newline()
 }
 
 func (c *Compiler) enum(en EnumType) {

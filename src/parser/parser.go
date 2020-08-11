@@ -234,7 +234,12 @@ func (parser *Parser) parseStructType() StructType {
 	parser.eatLastToken()
 
 	for {
-		strct.Props = append(strct.Props, parser.parseDeclaration())
+		if parser.ReadToken().SecondaryType == DotDot {
+			parser.eatLastToken()
+			strct.SuperStructs = append(strct.SuperStructs, parser.parseExpression())
+		} else {
+			strct.Props = append(strct.Props, parser.parseDeclaration())
+		}
 
 		if parser.ReadToken().PrimaryType == SemiColon {
 			parser.eatLastToken()
@@ -653,7 +658,9 @@ func (parser *Parser) parseCompoundLiteral() CompoundLiteralData {
 			parser.moveToFork(2)
 			state = 2
 		case 2:
-			cl.Values = parser.parseExpressionArray()
+			if next.PrimaryType != RightCurlyBrace {
+				cl.Values = parser.parseExpressionArray()
+			}
 			c = false
 		case 3:
 			if next.PrimaryType == RightCurlyBrace {
@@ -804,14 +811,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 			Typ := parser.parseType()
 			parser.expect(RightParen, SecondaryNullType)
 			parser.eatLastToken()
-			if parser.ReadToken().PrimaryType != LeftParen {
-				return TypeCast{Type: Typ, Expr: parser.parseExpr(9)}
-			}
-			parser.eatLastToken()
-			Expr := parser.parseExpr(0)
-			parser.expect(RightParen, SecondaryNullType)
-			parser.eatLastToken()
-			return TypeCast{Type: Typ, Expr: Expr}
+			return TypeCast{Type: Typ, Expr: parser.parseExpr(9)}
 		} else if token.PrimaryType == LenKeyword {
 			parser.eatLastToken()
 			parser.expect(LeftParen, SecondaryNullType)

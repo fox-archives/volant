@@ -1,5 +1,11 @@
 struct Kaka {
-    a, b: i32
+    a, b: i32 = 0, 1
+    c, d: i32 = 2, 3
+}
+
+struct Kaka2 {
+    ..Kaka
+    e, f: i32 = 4, 5
 }
 
 enum Kakak {
@@ -27,11 +33,11 @@ main: func() i32 = func() i32 {
     y: [10]*i8;
     z: [10]*const u8;
     
-    printf("function() returned %i\n", function());
+    pri32f("function() returned %i\n", function());
     
     str, num: *i8, i32 = "hehehehe", 3 - 2 / 2 * -5 + 10 
     
-    defer printf("Haha I'll be printed on the last\n")
+    defer pri32f("Haha I'll be pri32ed on the last\n")
 
     a: *dynamic i8 = &(new i8)
     // a: i8 = "hehe"
@@ -39,25 +45,25 @@ main: func() i32 = func() i32 {
     m: dynamic []i32
 
     m = new [100]i32
-    printf("Size of m is %zu. Length of m is %zu.\n", size(m), len(m))
+    pri32f("Size of m is %zu. Length of m is %zu.\n", size(m), len(m))
     delete m
-    printf("Deleted m. Size of m is %zu. Length of m is %zu.\n", size(m), len(m));
+    pri32f("Deleted m. Size of m is %zu. Length of m is %zu.\n", size(m), len(m));
 
     m = new [200]i32
-    printf("Size of m is %zu. Length of m is %zu.\n", size(m), len(m))
+    pri32f("Size of m is %zu. Length of m is %zu.\n", size(m), len(m))
     
     uninitialized: i32;
     
-    cast(m._ptr, intptr)[0] = 0
+    cast(m._ptr, i32ptr)[0] = 0
 
-    printf("size is %li.\n", size);
-    printf("m is %i.\nLength of m is %zu\n", m[0], size(m))
-    printf("function() returned %i.\n", function())
+    pri32f("size is %li.\n", size);
+    pri32f("m is %i.\nLength of m is %zu\n", m[0], size(m))
+    pri32f("function() returned %i.\n", function())
 
     p: Kaka = (Kaka){a: 0, b: 0}
     q: Kakakak = (Kakakak){0, 0}
 
-    printf("p.a is %i and p.b is %i.\n", p.a, p.b);
+    pri32f("p.a is %i and p.b is %i.\n", p.a, p.b);
     printf("q[0] is %i and q[1] is %i.\n\n", q._0, q._1)
     
     mem: *i8 = malloc(sizeof(i8[10]))
@@ -103,7 +109,7 @@ main: func() i32 = func() i32 {
 }
 
 */
-o: [10]***func(int) **int;
+o: [10]***func(i32) **i32;
 
 typedef haha [100]u16;
 typedef haa u8
@@ -128,7 +134,7 @@ main := func() i32 {
     
     printf("haha I'll decay to pointer. %i.\n", function()[0][0][0]);
 
-    printf("Kakak.a is %i.\n", cast(int)Kakak.a);
+    printf("Kakak.a is %i.\n", cast(i32)Kakak.a);
     
     str := "hehehe"
     printf("hehe is %s.\n", str)
@@ -144,7 +150,9 @@ main := func() i32 {
     printf("Length of a is %zu. Size of a is %zu.\n", len(o), size(o));
 
     tupl := (Kakakak){0, 1};
-    printf("tupl[0] is %i. tupl[1] is %i\n", tupl[0+8], tupl[1])
+    printf("tupl[0] is %i. tupl[1] is %i\n", tupl[0], tupl[1])
     
+    strct := (Kaka2){a: 1}
+    strct2 := cast(Kaka)strct
     return 0
 };
