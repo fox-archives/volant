@@ -108,24 +108,6 @@ type (
 		Line      int
 		Column    int
 	}
-	EnumTypedef struct {
-		Name   Token
-		Type   EnumType
-		Line   int
-		Column int
-	}
-	TupleTypedef struct {
-		Identifier Token
-		Type       TupleType
-		Line       int
-		Column     int
-	}
-	StructTypedef struct {
-		Identifier Token
-		Type       StructType
-		Line       int
-		Column     int
-	}
 	Defer struct {
 		Stmt   Statement
 		Line   int
@@ -250,7 +232,9 @@ type (
 	}
 
 	StructType struct {
-		Props []Declaration
+		Props        []Declaration
+		SuperStructs []Expression
+		SuperStructTypes []Type
 	}
 
 	TupleType struct {
@@ -348,6 +332,7 @@ func (PointerType) isType()      {}
 func (ArrayType) isType()        {}
 func (DynamicType) isType()      {}
 func (ImplictArrayType) isType() {}
+func (Typedef) isType()          {}
 
 func (BasicType) isExpression()        {}
 func (StructType) isExpression()       {}
@@ -359,6 +344,7 @@ func (PointerType) isExpression()      {}
 func (ArrayType) isExpression()        {}
 func (DynamicType) isExpression()      {}
 func (ImplictArrayType) isExpression() {}
+func (Typedef) isExpression()          {}
 
 func (BasicType) isStatement()        {}
 func (StructType) isStatement()       {}
@@ -370,21 +356,7 @@ func (PointerType) isStatement()      {}
 func (ArrayType) isStatement()        {}
 func (DynamicType) isStatement()      {}
 func (ImplictArrayType) isStatement() {}
-
-func (Typedef) isStatement()       {}
-func (EnumTypedef) isStatement()   {}
-func (TupleTypedef) isStatement()  {}
-func (StructTypedef) isStatement() {}
-
-func (Typedef) isExpression()       {}
-func (EnumTypedef) isExpression()   {}
-func (TupleTypedef) isExpression()  {}
-func (StructTypedef) isExpression() {}
-
-func (Typedef) isType()       {}
-func (EnumTypedef) isType()   {}
-func (TupleTypedef) isType()  {}
-func (StructTypedef) isType() {}
+func (Typedef) isStatement()          {}
 
 var VoidType = BasicType{
 	Expr: IdentExpr{
