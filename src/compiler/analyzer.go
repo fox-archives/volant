@@ -2,22 +2,32 @@ package compiler
 
 import (
 	"bytes"
+	"error"
+	"importer"
 	. "parser"
+	"path"
 	"strconv"
+	"strings"
 )
 
 type SemanticAnalyzer struct {
 	Symbols      SymbolTable
 	CurrentScope int
+	NameSp       Namespace
+	Imports      map[string][]byte
 }
 
-func AnalyzeFile(ast File) File {
+func AnalyzeFile(ast File, path string, isMain bool) File {
 	s := SemanticAnalyzer{
 		Symbols: SymbolTable{
 			First: &Node{},
 		},
 		CurrentScope: 0,
+		NameSp:       Namespace{},
+		Imports:      map[string][]byte{},
 	}
+
+	s.NameSp.Init(path, isMain)
 
 	newAst := File{}
 
@@ -65,25 +75,44 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 		return s.rturn(stmt.(Return))
 	case Delete:
 		return s.delete(stmt.(Delete))
+	case ExportStatement:
+		return ExportStatement{Stmt: s.statement(stmt.(ExportStatement).Stmt)}
 	case Expression:
 		return s.expr(stmt.(Expression))
+	case Import:
+		return s.imprt(stmt.(Import))
 	}
 
+	return stmt
+}
+
+func (s *SemanticAnalyzer) imprt(stmt Import) Import {
+	for i, Path := range stmt.Paths {
+		path1 := path.Clean(string(Path.Buff[1 : len(Path.Buff)-1]))
+		path2 := s.NameSp.BasePath
+
+		importer.ImportFile(path2, path1, false, CompileFile, AnalyzeFile)
+
+		s.Imports[strings.Split(path.Base(path1), ".")[0]] = []byte(s.NameSp.getImportPrefix(path.Join(path2, path1)))
+
+		if path.Ext(path2) != ".h" {
+			path1 += ".h"
+		}
+		stmt.Paths[i].Buff = []byte(path1)
+	}
 	return stmt
 }
 
 func (s *SemanticAnalyzer) enum(enum EnumType, Name Token) EnumType {
 	s.pushScope()
 	for i, Ident := range enum.Identifiers {
-		enum.Identifiers[i] = getEnumProp(Name.Buff, Ident)
+		enum.Identifiers[i] = s.NameSp.getEnumProp(Name.Buff, Ident)
 	}
 	s.popScope()
 	return enum
 }
 
 func (s *SemanticAnalyzer) typedef(typedef Typedef) Typedef {
-	defer s.addSymbol(typedef.Name, typedef)
-
 	Typ := typedef.Type
 
 	switch typedef.Type.(type) {
@@ -94,15 +123,17 @@ func (s *SemanticAnalyzer) typedef(typedef Typedef) Typedef {
 				strct.Props = append(strct.Props, prop)
 			}
 		}
-		typedef.Type = strct
 		Typ = s.strct(strct)
+		typedef.Type = Typ
+		typedef.DefaultName = s.NameSp.getStrctDefaultName(typedef.Name)
 	case TupleType:
 		Typ = s.tupl(Typ.(TupleType))
 	case EnumType:
 		Typ = s.enum(Typ.(EnumType), typedef.Name)
 	}
 
-	return Typedef{Type: s.typ(Typ), Name: getNewVarName(typedef.Name)}
+	s.addSymbol(typedef.Name, typedef)
+	return Typedef{DefaultName: typedef.DefaultName, Type: s.typ(Typ), Name: s.NameSp.getNewVarName(typedef.Name)}
 }
 
 func (s *SemanticAnalyzer) tupl(typ TupleType) TupleType {
@@ -139,7 +170,7 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 		}
 	} else if len(dec.Types) == 0 {
 		if len(dec.Values) == 0 {
-			NewError(SyntaxError, "Cannot declare a variable without type and value.", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
+			error.New("Cannot declare a variable without type and value.", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
 		}
 		for _, Val := range dec.Values {
 			dec.Types = append(dec.Types, s.getType(Val))
@@ -151,15 +182,15 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 	}
 
 	if len(dec.Values) > 0 && len(dec.Types) != len(dec.Values) {
-		NewError(SyntaxError, "Invalid number of types or values specified", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
+		error.New("Invalid number of types or values specified", dec.Identifiers[0].Line, dec.Identifiers[0].Column)
 	}
 
 	for i, Ident := range dec.Identifiers {
 		if s.getSymbol(Ident) != nil {
-			NewError(SyntaxError, string(Ident.Buff)+" has already been declared.", Ident.Line, Ident.Column)
+			error.New(string(Ident.Buff)+" has already been declared.", Ident.Line, Ident.Column)
 		} else {
 			s.addSymbol(Ident, dec.Types[i])
-			dec.Identifiers[i] = getNewVarName(Ident)
+			dec.Identifiers[i] = s.NameSp.getNewVarName(Ident)
 		}
 	}
 
@@ -170,10 +201,48 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 	return dec
 }
 
+func (s *SemanticAnalyzer) strctProp(prop Declaration) Declaration {
+	if len(prop.Types) == 1 {
+		Type := prop.Types[0]
+		for i := 1; i < len(prop.Identifiers); i++ {
+			prop.Types = append(prop.Types, Type)
+		}
+	} else if len(prop.Types) == 0 {
+		if len(prop.Values) == 0 {
+			error.New("Cannot declare a variable without type and value.", prop.Identifiers[0].Line, prop.Identifiers[0].Column)
+		}
+		for _, Val := range prop.Values {
+			prop.Types = append(prop.Types, s.getType(Val))
+		}
+	}
+
+	for i, typ := range prop.Types {
+		prop.Types[i] = s.typ(typ)
+	}
+
+	if len(prop.Values) > 0 && len(prop.Types) != len(prop.Values) {
+		error.New("Invalid number of types or values specified", prop.Identifiers[0].Line, prop.Identifiers[0].Column)
+	}
+
+	for i, Val := range prop.Values {
+		prop.Values[i] = s.expr(Val)
+	}
+
+	for i, Ident := range prop.Identifiers {
+		if s.Symbols.Find(Ident, s.CurrentScope) != nil {
+			error.New(string(Ident.Buff)+" has already been decplared.", Ident.Line, Ident.Column)
+		} else {
+			s.addSymbol(Ident, prop.Types[i])
+		}
+	}
+
+	return prop
+}
+
 func (s *SemanticAnalyzer) strct(strct StructType) StructType {
 	s.pushScope()
 	for i, prop := range strct.Props {
-		strct.Props[i] = s.declaration(prop)
+		strct.Props[i] = s.strctProp(prop)
 	}
 	s.popScope()
 	return strct
@@ -184,7 +253,7 @@ func (s *SemanticAnalyzer) expr(expr Expression) Expression {
 
 	switch expr.(type) {
 	case IdentExpr:
-		expr2 = IdentExpr{Value: getNewVarName(expr.(IdentExpr).Value)}
+		expr2 = IdentExpr{Value: s.NameSp.getNewVarName(expr.(IdentExpr).Value)}
 	case UnaryExpr:
 		expr2 = UnaryExpr{Op: expr.(UnaryExpr).Op, Expr: s.expr(expr.(UnaryExpr).Expr)}
 	case BinaryExpr:
@@ -234,6 +303,13 @@ func (s *SemanticAnalyzer) typ(typ Type) Type {
 		return ArrayType{Size: typ.(ArrayType).Size, BaseType: s.typ(typ.(ArrayType).BaseType)}
 	case FuncType:
 		return FuncType{Type: typ.(FuncType).Type, ArgTypes: s.typeArray(typ.(FuncType).ArgTypes), ArgNames: typ.(FuncType).ArgNames, ReturnTypes: s.typeArray(typ.(FuncType).ReturnTypes)}
+	case StructType:
+		Typ := typ.(StructType)
+		for i, prop := range typ.(StructType).Props {
+			for j, ident := range prop.Identifiers {
+				Typ.Props[i].Identifiers[j] = s.NameSp.getNewVarName(ident)
+			}
+		}
 	}
 
 	return typ
@@ -248,6 +324,8 @@ func (s *SemanticAnalyzer) typeArray(types []Type) []Type {
 }
 
 func (s *SemanticAnalyzer) typeCast(expr TypeCast) TypeCast {
+	return TypeCast{Type: s.typ(expr.Type), Expr: s.expr(expr.Expr)}
+
 	switch expr.Type.(type) {
 	case BasicType:
 		break
@@ -308,17 +386,19 @@ func (s *SemanticAnalyzer) typeCast(expr TypeCast) TypeCast {
 	}
 }
 
-//cast(strct)var -> *((strct *)(&var +offsetof(strct, a)))
-
 func (s *SemanticAnalyzer) compoundLiteral(expr CompoundLiteral) CompoundLiteral {
 	Name := s.expr(expr.Name)
 	Typ := s.getType(Name)
+
+	if Typ == nil {
+		error.New("Unknown Type.", 0, 0)
+	}
 
 	switch Typ.(type) {
 	case Typedef:
 		break
 	default:
-		NewError(SyntaxError, "Unexpected expression. Expected struct or tuple type.", 0, 0)
+		error.New("Unexpected expression. Expected struct or tuple type.", 0, 0)
 	}
 
 	switch Typ.(Typedef).Type.(type) {
@@ -327,50 +407,57 @@ func (s *SemanticAnalyzer) compoundLiteral(expr CompoundLiteral) CompoundLiteral
 	case TupleType:
 		return CompoundLiteral{Name: Name, Data: s.compoundLiteralData(expr.Data)}
 	default:
-		NewError(SyntaxError, "Unexpected expression. Expected struct or tuple type.", 0, 0)
+		error.New("Unexpected expression. Expected struct or tuple type.", 0, 0)
 	}
 
 	strct := Typ.(Typedef).Type.(StructType)
 	data := s.compoundLiteralData(expr.Data)
 
 	if len(data.Fields) == 0 && len(data.Values) > 0 {
-		return CompoundLiteral{Name: Name, Data: data}
-	}
+		x := 0
+		l := len(data.Values)
 
-	for _, prop := range strct.Props {
-		if len(prop.Values) == 0 {
-			break
-		}
+		for _, prop := range strct.Props {
+			for j, Ident := range prop.Identifiers {
 
-		for i, Ident := range prop.Identifiers {
-			if hasField(data.Fields, Ident) {
-				continue
-			}
-
-			if len(prop.Types) > 1 {
-				switch prop.Types[i].(type) {
+				switch prop.Types[j].(type) {
 				case FuncType:
 					break
 				default:
 					data.Fields = append(data.Fields, Ident)
+					x++
+
+					if x <= l {
+						continue
+					}
+
 					data.Values = append(data.Values, MemberExpr{
 						Base: IdentExpr{
-							Value: getStrctDefaultName(Typ.(Typedef).Name),
+							Value: s.NameSp.getStrctDefaultName(Typ.(Typedef).Name),
 						},
 						Expr: IdentExpr{
 							Value: Ident,
 						},
 					})
 				}
-			} else {
-				switch prop.Types[0].(type) {
+			}
+		}
+	} else {
+		for _, prop := range strct.Props {
+			for j, Ident := range prop.Identifiers {
+
+				if hasField(data.Fields, Ident) {
+					continue
+				}
+
+				switch prop.Types[j].(type) {
 				case FuncType:
 					break
 				default:
 					data.Fields = append(data.Fields, Ident)
 					data.Values = append(data.Values, MemberExpr{
 						Base: IdentExpr{
-							Value: getStrctDefaultName(Typ.(Typedef).Name),
+							Value: s.NameSp.getStrctDefaultName(Typ.(Typedef).Name),
 						},
 						Expr: IdentExpr{
 							Value: Ident,
@@ -398,7 +485,7 @@ func (s *SemanticAnalyzer) compoundLiteralData(data CompoundLiteralData) Compoun
 		data.Values[i] = s.expr(Val)
 	}
 	for i, Field := range data.Fields {
-		data.Fields[i] = getNewVarName(Field)
+		data.Fields[i] = s.NameSp.getNewVarName(Field)
 	}
 	return data
 }
@@ -437,14 +524,14 @@ func (s *SemanticAnalyzer) arrayMemberExpr(expr ArrayMemberExpr) Expression {
 	case BasicLit:
 		break
 	default:
-		NewError(SyntaxError, "Only number literals are allowed in tupl element reference.", 0, 0)
+		error.New("Only number literals are allowed in tupl element reference.", 0, 0)
 	}
 
 	switch expr.Index.(BasicLit).Value.PrimaryType {
 	case NumberLiteral:
 		break
 	default:
-		NewError(SyntaxError, "Only number literals are allowed in tupl element reference.", 0, 0)
+		error.New("Only number literals are allowed in tupl element reference.", 0, 0)
 	}
 
 	return MemberExpr{
@@ -470,6 +557,27 @@ func (s *SemanticAnalyzer) sizeExpr(expr SizeExpr) SizeExpr {
 }
 
 func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
+
+	switch expr.Base.(type) {
+	case IdentExpr:
+		if val, ok := s.Imports[string(expr.Base.(IdentExpr).Value.Buff)]; ok {
+			switch expr.Expr.(type) {
+			case MemberExpr:
+				return MemberExpr{
+					Base: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(MemberExpr).Base.(IdentExpr).Value)},
+					Expr: expr.Expr.(MemberExpr).Expr,
+				}
+			case CallExpr:
+				return CallExpr{
+					Function: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(CallExpr).Function.(IdentExpr).Value)},
+					Args:     expr.Expr.(CallExpr).Args,
+				}
+			case IdentExpr:
+				return IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(IdentExpr).Value)}
+			}
+		}
+	}
+
 	Typ := s.getType(expr.Base)
 
 	switch Typ.(type) {
@@ -490,10 +598,10 @@ func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
 	case IdentExpr:
 		break
 	default:
-		// NewError(SyntaxError, "Expected identifier, got expression", )
+		// error.New("Expected identifier, got expression", )
 	}
 
-	return IdentExpr{Value: getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
+	return IdentExpr{Value: s.NameSp.getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
 }
 
 func (s *SemanticAnalyzer) exprArray(array []Expression) []Expression {
@@ -509,7 +617,6 @@ func (s *SemanticAnalyzer) decayToPointer(expr Expression) Expression {
 
 	switch Typ.(type) {
 	case DynamicType:
-
 		switch Typ.(DynamicType).BaseType.(type) {
 		case ImplictArrayType:
 			return TypeCast{
@@ -579,8 +686,8 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 	case IdentExpr:
 		Ident := expr.(IdentExpr).Value
 		var symbol *Node
-		if Ident.Flags == 1 {
-			symbol = s.getSymbol(getActualName(Ident))
+		if Ident.Flags != 0 {
+			symbol = s.getSymbol(s.NameSp.getActualName(Ident))
 		} else {
 			symbol = s.getSymbol(Ident)
 		}

@@ -11,13 +11,10 @@ type Compiler struct {
 }
 
 func CompileFile(ast File) []byte {
-	c := Compiler{}
-	c.ScopeCount = 0
-
+	c := Compiler{ScopeCount: 0}
 	for _, statement := range ast.Statements {
 		c.globalStatement(statement)
 	}
-
 	return c.Buff
 }
 func (c *Compiler) append(buff []byte) {
@@ -102,11 +99,35 @@ func (c *Compiler) globalStatement(stmt Statement) {
 	c.newline()
 	switch stmt.(type) {
 	case Declaration:
-		c.globalDeclaration(stmt.(Declaration))
-	case Switch:
-		c.swtch(stmt.(Switch))
+		c.globalDeclaration(stmt.(Declaration), false)
 	case Typedef:
 		c.typedef(stmt.(Typedef))
+	case ExportStatement:
+		c.exportStatement(stmt.(ExportStatement).Stmt)
+	case NullStatement:
+		c.semicolon()
+	case Import:
+		c.imprt(stmt.(Import))
+	}
+}
+
+func (c *Compiler) imprt(stmt Import) {
+	for _, path := range stmt.Paths {
+		c.append([]byte("#include \""))
+		c.append(path.Buff)
+		c.append([]byte("\""))
+		c.newline()
+	}
+}
+
+func (c *Compiler) exportStatement(stmt Statement) {
+	switch stmt.(type) {
+	case Declaration:
+		c.globalDeclaration(stmt.(Declaration), true)
+	case Typedef:
+		c.typedef(stmt.(Typedef))
+	case ExportStatement:
+		c.exportStatement(stmt.(ExportStatement).Stmt)
 	case NullStatement:
 		c.semicolon()
 	}
@@ -154,9 +175,9 @@ func (c *Compiler) typedef(typedef Typedef) {
 	c.space()
 	c.declarationType(typedef.Type, typedef.Name)
 	c.semicolon()
-	c.newline()
 	switch typedef.Type.(type) {
 	case StructType:
+		c.newline()
 		c.strctDefault(typedef)
 	}
 }
@@ -222,12 +243,14 @@ func (c *Compiler) loop(loop Loop) {
 	}
 }
 
-func (c *Compiler) globalDeclaration(dec Declaration) {
+func (c *Compiler) globalDeclaration(dec Declaration, isExported bool) {
 	hasValues := len(dec.Values) > 0
 
 	for i, Var := range dec.Identifiers {
-		c.append([]byte("static"))
-		c.space()
+		if !isExported {
+			c.append([]byte("static"))
+			c.space()
+		}
 		c.declarationType(dec.Types[i], Var)
 
 		if hasValues {
@@ -781,7 +804,7 @@ func (c *Compiler) strct(typ StructType) {
 func (c *Compiler) strctDefault(strct Typedef) {
 	c.identifier(strct.Name)
 	c.space()
-	c.identifier(getStrctDefaultName(getActualName(strct.Name)))
+	c.identifier(strct.DefaultName)
 
 	c.space()
 	c.equal()

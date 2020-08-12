@@ -1,5 +1,7 @@
 package parser
 
+import "error"
+
 type Parser struct {
 	Lexer    *Lexer
 	tokens   []Token
@@ -48,15 +50,15 @@ func (parser *Parser) expect(primary PrimaryTokenType, secondary SecondaryTokenT
 
 	if primary == PrimaryNullType {
 		if token.SecondaryType != secondary {
-			NewError(SyntaxError, "expected "+SecondaryTypes[secondary]+", got "+token.Serialize(), token.Line, token.Column)
+			error.New("expected "+SecondaryTypes[secondary]+", got "+token.Serialize(), token.Line, token.Column)
 		}
 	} else if secondary == SecondaryNullType {
 		if token.PrimaryType != primary {
-			NewError(SyntaxError, "expected "+PrimaryTypes[primary]+", got "+token.Serialize(), token.Line, token.Column)
+			error.New("expected "+PrimaryTypes[primary]+", got "+token.Serialize(), token.Line, token.Column)
 		}
 	} else {
 		if token.PrimaryType != primary || token.SecondaryType != secondary {
-			NewError(SyntaxError, "expected "+PrimaryTypes[primary]+" and "+SecondaryTypes[secondary]+", got "+token.Serialize(), token.Line, token.Column)
+			error.New("expected "+PrimaryTypes[primary]+" and "+SecondaryTypes[secondary]+", got "+token.Serialize(), token.Line, token.Column)
 		}
 	}
 
@@ -82,6 +84,9 @@ func (parser *Parser) parseGlobalStatement() Statement {
 	case TypedefKeyword:
 		parser.eatLastToken()
 		statement = parser.parseTypedef()
+	case ExportKeyword:
+		parser.eatLastToken()
+		statement = ExportStatement{Stmt: parser.parseGlobalStatement()}
 	case Identifier:
 		statement = parser.parseDeclaration()
 	default:

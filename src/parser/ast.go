@@ -47,6 +47,7 @@ type Type interface {
 }
 
 type File struct {
+	Path       string
 	Statements []Statement
 }
 
@@ -119,10 +120,11 @@ type (
 		Column int
 	}
 	Typedef struct {
-		Name   Token
-		Type   Type
-		Line   int
-		Column int
+		Name        Token
+		DefaultName Token
+		Type        Type
+		Line        int
+		Column      int
 	}
 	Break struct {
 		Line   int
@@ -131,6 +133,9 @@ type (
 	Continue struct {
 		Line   int
 		Column int
+	}
+	ExportStatement struct {
+		Stmt Statement
 	}
 	NullStatement struct {
 		Line   int
@@ -232,8 +237,8 @@ type (
 	}
 
 	StructType struct {
-		Props        []Declaration
-		SuperStructs []Expression
+		Props            []Declaration
+		SuperStructs     []Expression
 		SuperStructTypes []Type
 	}
 
@@ -272,19 +277,20 @@ type (
 	}
 )
 
-func (Block) isStatement()         {}
-func (Declaration) isStatement()   {}
-func (Import) isStatement()        {}
-func (Loop) isStatement()          {}
-func (Switch) isStatement()        {}
-func (IfElseBlock) isStatement()   {}
-func (Return) isStatement()        {}
-func (Assignment) isStatement()    {}
-func (NullStatement) isStatement() {}
-func (Break) isStatement()         {}
-func (Continue) isStatement()      {}
-func (Defer) isStatement()         {}
-func (Delete) isStatement()        {}
+func (Block) isStatement()           {}
+func (Declaration) isStatement()     {}
+func (Import) isStatement()          {}
+func (Loop) isStatement()            {}
+func (Switch) isStatement()          {}
+func (IfElseBlock) isStatement()     {}
+func (Return) isStatement()          {}
+func (Assignment) isStatement()      {}
+func (NullStatement) isStatement()   {}
+func (Break) isStatement()           {}
+func (Continue) isStatement()        {}
+func (Defer) isStatement()           {}
+func (Delete) isStatement()          {}
+func (ExportStatement) isStatement() {}
 
 func (BasicLit) isExpression()            {}
 func (BinaryExpr) isExpression()          {}

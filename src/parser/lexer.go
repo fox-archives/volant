@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"error"
 	"math"
 	"strconv"
 )
@@ -63,7 +64,7 @@ func (lexer *Lexer) skipSpaces() {
 	for next, _ := lexer.peek(); ; next, _ = lexer.peek() {
 		if next == '\n' {
 			lexer.shiftLine()
-		} else if next == ' ' || next == '\t' {
+		} else if next == ' ' || next == '\t' || next == '\r' {
 			lexer.eatLastByte()
 		} else { // eof handled here
 			break
@@ -87,7 +88,7 @@ func (lexer *Lexer) multilineComment() {
 		}
 
 		if next2, ok := lexer.peek(); !ok {
-			NewError(SyntaxError, "Expected end of multiline comment, got eof.", lexer.Line, lexer.Column)
+			error.New("Expected end of multiline comment, got eof.", lexer.Line, lexer.Column)
 		} else if next2 != '/' {
 			continue
 		}
@@ -132,7 +133,7 @@ func (lexer *Lexer) NextToken() Token {
 			return op
 		}
 	}
-
+	error.New("Unknown character.", lexer.Line, lexer.Column)
 	return Token{PrimaryType: ErrorToken, SecondaryType: UnknownChar, Buff: nil}
 }
 
@@ -251,12 +252,12 @@ func (lexer *Lexer) lexChar() Token {
 				chr, ok := lexer.peek()
 
 				if !ok { // Error: Expected escape sequence, got eof
-					NewError(SyntaxError, "exprected escape sequence, got eof.", line, column)
+					error.New("exprected escape sequence, got eof.", line, column)
 				} else if IsNumHex(chr) {
 					num += HexToInt(chr) * Pow(16, (3-i))
 					lexer.eatLastByte()
 				} else { // Error: Invalid character in escape sequence, expected (0-9|A-F|a-f)
-					NewError(SyntaxError, "invalid character in escape sequence.", line, column)
+					error.New("invalid character in escape sequence.", line, column)
 				}
 			}
 
@@ -266,12 +267,12 @@ func (lexer *Lexer) lexChar() Token {
 				chr, ok := lexer.peek()
 
 				if !ok { // Error: Expected escape sequence, got eof
-					NewError(SyntaxError, "exprected escape sequence, got eof.", line, column)
+					error.New("exprected escape sequence, got eof.", line, column)
 				} else if IsNumHex(chr) {
 					num += HexToInt(chr) * Pow(16, (7-i))
 					lexer.eatLastByte()
 				} else { // Error: Invalid character in escape sequence, expected (0-9|A-F|a-f)
-					NewError(SyntaxError, "invalid character in escape sequence.", line, column)
+					error.New("invalid character in escape sequence.", line, column)
 				}
 			}
 			encoding = Byte4Char
@@ -283,7 +284,7 @@ func (lexer *Lexer) lexChar() Token {
 			lexer.eatLastByte() // increament the positon as `nextChar` was `'` as expected
 			return Token{PrimaryType: CharLiteral, SecondaryType: encoding, Buff: []byte(strconv.Itoa(num)), Line: line, Column: column}
 		}
-		NewError(SyntaxError, "exprected ', got eof.", line, column)
+		error.New("exprected ', got eof.", line, column)
 	} else if character>>7 == 0 { // 1 byte char
 		encoding = Byte1Char
 	} else if character>>5 == 0b110 { // 2 byte char
@@ -337,10 +338,10 @@ func (lexer *Lexer) lexString() Token {
 
 		if !ok {
 			// Error: Expected end of string literal, got eof
-			NewError(SyntaxError, "expected \", got eof.", lexer.Line, lexer.Column)
+			error.New("expected \", got eof.", lexer.Line, lexer.Column)
 		} else if character == '\n' {
 			// Error: Expected end of string literal, got end of line
-			NewError(SyntaxError, "expected \", got end of line.", lexer.Line, lexer.Column)
+			error.New("expected \", got end of line.", lexer.Line, lexer.Column)
 		}
 
 		str = append(str, character)

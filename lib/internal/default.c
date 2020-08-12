@@ -1,6 +1,3 @@
-package compiler
-
-var Default []byte = []byte(`
 #include <stdio.h>
 #include <string.h>
 #include "gc.h"
@@ -20,31 +17,26 @@ var Default []byte = []byte(`
 
 #define cast(val, type) ((type)val)
 
-typedef unsigned char v_u8;
-typedef unsigned short v_u16;
-typedef unsigned int v_u32;
-typedef unsigned long v_u64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long u64;
 
-typedef char v_i8;
-typedef short v_i16;
-typedef int v_i32;
-typedef long v_i64;
- 
-typedef void v_void;
+typedef char i8;
+typedef short i16;
+typedef int i32;
+typedef long i64;
 
 typedef struct {
-    char *_ptr;
+    void *_ptr;
     size_t _size;
 } __mem_block;
 
-size_t size = sizeof(char[10]);
 
-#define v_printf printf
-#define v_memcpy memcpy
+#define v_main_printf printf
+#define v_main_memcpy memcpy
 
-static int v_main();
-
+static i32 v_main_main();
 int main() {
-	return v_main();
+	return v_main_main();
 }
-`)
