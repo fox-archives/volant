@@ -81,6 +81,9 @@ func (parser *Parser) parseGlobalStatement() Statement {
 	case TupleKeyword:
 		parser.eatLastToken()
 		statement = parser.parseTupleTypedef(false)
+	case UnionKeyword:
+		parser.eatLastToken()
+		statement = parser.parseUnionTypedef()
 	case TypedefKeyword:
 		parser.eatLastToken()
 		statement = parser.parseTypedef()
@@ -105,6 +108,16 @@ func (parser *Parser) parseTypedef() Typedef {
 	parser.eatLastToken()
 
 	return Typedef{Name: Name, Type: parser.parseType()}
+}
+
+func (parser *Parser) parseUnionTypedef() Typedef {
+	union := Typedef{}
+
+	union.Name = parser.expect(Identifier, SecondaryNullType)
+	parser.eatLastToken()
+
+	union.Type = parser.parseUnionType()
+	return union
 }
 
 func (parser *Parser) parseStructTypedef(allowUnnamed bool) Typedef {
@@ -271,6 +284,30 @@ func (parser *Parser) parseTupleType() TupleType {
 	parser.eatLastToken()
 
 	return tupl
+}
+
+func (parser *Parser) parseUnionType() UnionType {
+	union := UnionType{}
+
+	parser.expect(LeftCurlyBrace, SecondaryNullType)
+	parser.eatLastToken()
+
+	for tok := parser.ReadToken(); tok.PrimaryType != RightCurlyBrace; tok = parser.ReadToken() {
+		union.Identifiers = append(union.Identifiers, parser.expect(Identifier, SecondaryNullType))
+		parser.eatLastToken()
+
+		parser.expect(PrimaryNullType, Colon)
+		parser.eatLastToken()
+
+		union.Types = append(union.Types, parser.parseType())
+
+		if parser.ReadToken().PrimaryType == SemiColon {
+			parser.eatLastToken()
+		}
+	}
+
+	parser.eatLastToken()
+	return union
 }
 
 func (parser *Parser) parseEnumType() EnumType {

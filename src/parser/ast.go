@@ -251,6 +251,11 @@ type (
 		Values      []Expression
 	}
 
+	UnionType struct {
+		Identifiers []Token
+		Types       []Type
+	}
+
 	BasicType struct {
 		Expr Expression
 	}
@@ -332,6 +337,7 @@ func (BasicType) isType()        {}
 func (StructType) isType()       {}
 func (EnumType) isType()         {}
 func (TupleType) isType()        {}
+func (UnionType) isType()        {}
 func (FuncType) isType()         {}
 func (ConstType) isType()        {}
 func (PointerType) isType()      {}
@@ -344,6 +350,7 @@ func (BasicType) isExpression()        {}
 func (StructType) isExpression()       {}
 func (EnumType) isExpression()         {}
 func (TupleType) isExpression()        {}
+func (UnionType) isExpression()        {}
 func (FuncType) isExpression()         {}
 func (ConstType) isExpression()        {}
 func (PointerType) isExpression()      {}
@@ -356,6 +363,7 @@ func (BasicType) isStatement()        {}
 func (StructType) isStatement()       {}
 func (EnumType) isStatement()         {}
 func (TupleType) isStatement()        {}
+func (UnionType) isStatement()        {}
 func (FuncType) isStatement()         {}
 func (ConstType) isStatement()        {}
 func (PointerType) isStatement()      {}

@@ -130,6 +130,8 @@ func (s *SemanticAnalyzer) typedef(typedef Typedef) Typedef {
 		Typ = s.tupl(Typ.(TupleType))
 	case EnumType:
 		Typ = s.enum(Typ.(EnumType), typedef.Name)
+	case UnionType:
+		Typ = s.union(Typ.(UnionType))
 	}
 
 	s.addSymbol(typedef.Name, typedef)
@@ -138,6 +140,13 @@ func (s *SemanticAnalyzer) typedef(typedef Typedef) Typedef {
 
 func (s *SemanticAnalyzer) tupl(typ TupleType) TupleType {
 	return TupleType{Types: s.typeArray(typ.Types)}
+}
+
+func (s *SemanticAnalyzer) union(typ UnionType) UnionType {
+	for x, prop := range typ.Identifiers {
+		typ.Identifiers[x] = s.NameSp.getNewVarName(prop)
+	}
+	return UnionType{Identifiers: typ.Identifiers, Types: s.typeArray(typ.Types)}
 }
 
 func (s *SemanticAnalyzer) delete(delete Delete) Delete {

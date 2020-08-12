@@ -551,6 +551,10 @@ func (c *Compiler) declarationType(Typ Type, Name Token) {
 			c.tupl(typ.(TupleType))
 			c.space()
 			c.identifier(Name)
+		case UnionType:
+			c.union(typ.(UnionType))
+			c.space()
+			c.identifier(Name)
 		default:
 			c.Type(typ)
 			c.space()
@@ -644,6 +648,8 @@ func (c *Compiler) Type(Typ Type) {
 			c.enum(typ.(EnumType))
 		case TupleType:
 			c.tupl(typ.(TupleType))
+		case UnionType:
+			c.union(typ.(UnionType))
 		}
 
 		for i := 0; i < pointers; i++ {
@@ -863,6 +869,21 @@ func (c *Compiler) enum(en EnumType) {
 		c.newline()
 	}
 
+	c.popScope()
+	c.closeCurlyBrace()
+}
+
+func (c *Compiler) union(union UnionType) {
+	c.append([]byte("union {"))
+	c.newline()
+	c.pushScope()
+
+	for x, prop := range union.Identifiers {
+		c.indent()
+		c.declarationType(union.Types[x], prop)
+		c.semicolon()
+		c.newline()
+	}
 	c.popScope()
 	c.closeCurlyBrace()
 }
