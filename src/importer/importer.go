@@ -5,13 +5,25 @@ import (
 	"os"
 	. "parser"
 	Path "path"
+	"error"
 )
 
-var exPath, _ = os.Executable()
+exPath,err := os.Executable()
+if err!=nil {error.NewGenError("error finding volant executable: " + err.Error())}
+
 var libPath = Path.Join(Path.Dir(exPath), "../lib")
-var wd, _ = os.Getwd()
-var defaultVo, _ = ioutil.ReadFile(Path.Join(libPath, "internal/default.vo"))
-var defaultC, _ = ioutil.ReadFile(Path.Join(libPath, "internal/default.c"))
+
+wd, err := os.Getwd()
+if err!=nil {error.NewGenError("error finding current working directory: " + err.Error())}
+
+defaultVo, err := ioutil.ReadFile(Path.Join(libPath, "internal/default.vo"))
+if err!=nil {
+	error.NewGenError("error finding volant internals: " + err.Error())
+}
+defaultC, err := ioutil.ReadFile(Path.Join(libPath, "internal/default.c"))
+if err != nil {
+	error.NewGenError("error finding volant internals: " + err.Error())
+}
 
 func ImportFile(dir string, base string, isMain bool, CompileFile func(File) []byte, AnalyzeFile func(File, string, bool) File) {
 	path := Path.Join(dir, base)
@@ -29,11 +41,14 @@ func ImportFile(dir string, base string, isMain bool, CompileFile func(File) []b
 	Code, err = ioutil.ReadFile(path)
 
 	if err != nil && !isMain {
-		Code, _ = ioutil.ReadFile(Path.Join(libPath, base))
+		Code, err = ioutil.ReadFile(Path.Join(libPath, base))
+		if err != nil {
+			error.NewGenError("error finding import: " + err.Error())
+		}
 	}
 
 	f, err := os.Create(OutPath)
-
+	if err!=nil{error.NewGenError("error creating files: " + err.Error())}
 	if isMain {
 		f.Write(defaultC)
 	}
