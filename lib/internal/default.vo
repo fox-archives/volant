@@ -9,3 +9,7 @@ typedef i16 __UNSAFE_INTERNAL__i16
 typedef i32 __UNSAFE_INTERNAL__i32
 typedef i64 __UNSAFE_INTERNAL__i64
 typedef void __UNSAFE_INTERNAL__void
+
+typedef bool u8
+true: bool = 1
+false: bool = 0
