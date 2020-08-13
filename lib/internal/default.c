@@ -33,10 +33,10 @@ typedef struct {
 } __mem_block;
 
 
-#define v_main_printf printf
-#define v_main_memcpy memcpy
+#define v0_printf printf
+#define v0_memcpy memcpy
 
-static i32 v_main_main();
+static i32 v0_main();
 int main() {
-	return v_main_main();
+	return v0_main();
 }

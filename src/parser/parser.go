@@ -164,7 +164,11 @@ func (parser *Parser) parseImport() Import {
 	if token := parser.ReadToken(); token.PrimaryType == LeftParen {
 		parser.eatLastToken()
 
-		for token2 := parser.ReadToken(); token2.PrimaryType == Comma; parser.eatLastToken() {
+		imprt.Paths = append(imprt.Paths, parser.expect(StringLiteral, SecondaryNullType))
+		parser.eatLastToken()
+
+		for token2 := parser.ReadToken(); token2.PrimaryType == Comma; token2 = parser.ReadToken() {
+			parser.eatLastToken()
 			imprt.Paths = append(imprt.Paths, parser.expect(StringLiteral, SecondaryNullType))
 			parser.eatLastToken()
 		}

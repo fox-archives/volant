@@ -17,7 +17,7 @@ type SemanticAnalyzer struct {
 	Imports      map[string][]byte
 }
 
-func AnalyzeFile(ast File, path string, isMain bool) File {
+func AnalyzeFile(ast File, pathh string) File {
 	s := SemanticAnalyzer{
 		Symbols: SymbolTable{
 			First: &Node{},
@@ -27,7 +27,7 @@ func AnalyzeFile(ast File, path string, isMain bool) File {
 		Imports:      map[string][]byte{},
 	}
 
-	s.NameSp.Init(path, isMain)
+	s.NameSp.Init(path.Dir(pathh))
 
 	newAst := File{}
 
@@ -87,15 +87,15 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 }
 
 func (s *SemanticAnalyzer) imprt(stmt Import) Import {
+
 	for i, Path := range stmt.Paths {
 		path1 := path.Clean(string(Path.Buff[1 : len(Path.Buff)-1]))
-		path2 := s.NameSp.BasePath
 
-		importer.ImportFile(path2, path1, false, CompileFile, AnalyzeFile)
+		importer.ImportFile(s.NameSp.BasePath, path1, false, CompileFile, AnalyzeFile)
 
-		s.Imports[strings.Split(path.Base(path1), ".")[0]] = []byte(s.NameSp.getImportPrefix(path.Join(path2, path1)))
+		s.Imports[strings.Split(path.Base(path1), ".")[0]] = []byte(s.NameSp.getLastImportPrefix())
 
-		if path.Ext(path2) != ".h" {
+		if path.Ext(path1) != ".h" {
 			path1 += ".h"
 		}
 		stmt.Paths[i].Buff = []byte(path1)
@@ -354,40 +354,15 @@ func (s *SemanticAnalyzer) typeCast(expr TypeCast) TypeCast {
 	return TypeCast{
 		Type: expr.Type,
 		Expr: UnaryExpr{
-			Op: Token{
-				Buff:          []byte("*"),
-				PrimaryType:   AirthmaticOperator,
-				SecondaryType: Mul,
-			},
+			Op: Token{Buff: []byte("*"), PrimaryType: AirthmaticOperator, SecondaryType: Mul},
 			Expr: TypeCast{
-				Type: PointerType{
-					BaseType: expr.Type,
-				},
+				Type: PointerType{BaseType: expr.Type},
 				Expr: BinaryExpr{
-					Left: UnaryExpr{
-						Op: Token{
-							Buff:          []byte("&"),
-							PrimaryType:   BitwiseOperator,
-							SecondaryType: And,
-						},
-						Expr: s.expr(expr),
-					},
-					Op: Token{
-						Buff:          []byte("+"),
-						PrimaryType:   AirthmaticOperator,
-						SecondaryType: Add,
-					},
+					Left: UnaryExpr{Op: Token{Buff: []byte("&"), PrimaryType: BitwiseOperator, SecondaryType: And}, Expr: s.expr(expr)},
+					Op:   Token{Buff: []byte("+"), PrimaryType: AirthmaticOperator, SecondaryType: Add},
 					Right: CallExpr{
-						Function: IdentExpr{
-							Value: Token{
-								Buff:        []byte("offsetof"),
-								PrimaryType: Identifier,
-							},
-						},
-						Args: []Expression{
-							expr.Type.(BasicType).Expr,
-							Typ.(StructType).Props[0].Types[0],
-						},
+						Function: IdentExpr{Value: Token{Buff: []byte("offsetof"), PrimaryType: Identifier}},
+						Args:     []Expression{expr.Type.(BasicType).Expr, Typ.(StructType).Props[0].Types[0]},
 					},
 				},
 			},
@@ -431,24 +406,17 @@ func (s *SemanticAnalyzer) compoundLiteral(expr CompoundLiteral) CompoundLiteral
 
 				switch prop.Types[j].(type) {
 				case FuncType:
-					break
-				default:
-					data.Fields = append(data.Fields, Ident)
-					x++
-
-					if x <= l {
-						continue
-					}
-
-					data.Values = append(data.Values, MemberExpr{
-						Base: IdentExpr{
-							Value: s.NameSp.getStrctDefaultName(Typ.(Typedef).Name),
-						},
-						Expr: IdentExpr{
-							Value: Ident,
-						},
-					})
+					continue
 				}
+				data.Fields = append(data.Fields, Ident)
+				x++
+				if x <= l {
+					continue
+				}
+				data.Values = append(data.Values, MemberExpr{
+					Base: IdentExpr{Value: s.NameSp.getStrctDefaultName(Typ.(Typedef).Name)},
+					Expr: IdentExpr{Value: Ident},
+				})
 			}
 		}
 	} else {
@@ -458,21 +426,16 @@ func (s *SemanticAnalyzer) compoundLiteral(expr CompoundLiteral) CompoundLiteral
 				if hasField(data.Fields, Ident) {
 					continue
 				}
-
 				switch prop.Types[j].(type) {
 				case FuncType:
-					break
-				default:
-					data.Fields = append(data.Fields, Ident)
-					data.Values = append(data.Values, MemberExpr{
-						Base: IdentExpr{
-							Value: s.NameSp.getStrctDefaultName(Typ.(Typedef).Name),
-						},
-						Expr: IdentExpr{
-							Value: Ident,
-						},
-					})
+					continue
 				}
+
+				data.Fields = append(data.Fields, Ident)
+				data.Values = append(data.Values, MemberExpr{
+					Base: IdentExpr{Value: s.NameSp.getStrctDefaultName(Typ.(Typedef).Name)},
+					Expr: IdentExpr{Value: Ident},
+				})
 			}
 		}
 	}
@@ -545,13 +508,7 @@ func (s *SemanticAnalyzer) arrayMemberExpr(expr ArrayMemberExpr) Expression {
 
 	return MemberExpr{
 		Base: s.expr(expr.Parent),
-		Expr: IdentExpr{
-			Value: Token{
-				Buff:          []byte("_" + string(expr.Index.(BasicLit).Value.Buff)),
-				PrimaryType:   Identifier,
-				SecondaryType: SecondaryNullType,
-			},
-		},
+		Expr: IdentExpr{Value: Token{Buff: []byte("_" + string(expr.Index.(BasicLit).Value.Buff)), PrimaryType: Identifier}},
 	}
 }
 
@@ -567,23 +524,40 @@ func (s *SemanticAnalyzer) sizeExpr(expr SizeExpr) SizeExpr {
 
 func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
 
+	switch expr.Expr.(type) {
+	case ArrayMemberExpr:
+	case MemberExpr:
+	case IdentExpr:
+	case CallExpr:
+		break
+	default:
+		error.New("Unexpected token.", 0, 0)
+	}
+
 	switch expr.Base.(type) {
 	case IdentExpr:
-		if val, ok := s.Imports[string(expr.Base.(IdentExpr).Value.Buff)]; ok {
-			switch expr.Expr.(type) {
-			case MemberExpr:
-				return MemberExpr{
-					Base: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(MemberExpr).Base.(IdentExpr).Value)},
-					Expr: expr.Expr.(MemberExpr).Expr,
-				}
-			case CallExpr:
-				return CallExpr{
-					Function: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(CallExpr).Function.(IdentExpr).Value)},
-					Args:     expr.Expr.(CallExpr).Args,
-				}
-			case IdentExpr:
-				return IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(IdentExpr).Value)}
+		val, ok := s.Imports[string(expr.Base.(IdentExpr).Value.Buff)]
+		if !ok {
+			break
+		}
+		switch expr.Expr.(type) {
+		case MemberExpr:
+			return MemberExpr{
+				Base: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(MemberExpr).Base.(IdentExpr).Value)},
+				Expr: expr.Expr.(MemberExpr).Expr,
 			}
+		case CallExpr:
+			return CallExpr{
+				Function: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(CallExpr).Function.(IdentExpr).Value)},
+				Args:     expr.Expr.(CallExpr).Args,
+			}
+		case ArrayMemberExpr:
+			return ArrayMemberExpr{
+				Parent: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(ArrayMemberExpr).Parent.(IdentExpr).Value)},
+				Index:  expr.Expr.(ArrayMemberExpr).Index,
+			}
+		case IdentExpr:
+			return IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(IdentExpr).Value)}
 		}
 	}
 
@@ -601,13 +575,6 @@ func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
 		break
 	default:
 		return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
-	}
-
-	switch expr.Expr.(type) {
-	case IdentExpr:
-		break
-	default:
-		// error.New("Expected identifier, got expression", )
 	}
 
 	return IdentExpr{Value: s.NameSp.getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
@@ -629,31 +596,19 @@ func (s *SemanticAnalyzer) decayToPointer(expr Expression) Expression {
 		switch Typ.(DynamicType).BaseType.(type) {
 		case ImplictArrayType:
 			return TypeCast{
-				Type: Type(PointerType{BaseType: Typ.(DynamicType).BaseType.(ImplictArrayType).BaseType}),
-				Expr: Expression(MemberExpr{
+				Type: PointerType{BaseType: Typ.(DynamicType).BaseType.(ImplictArrayType).BaseType},
+				Expr: MemberExpr{
 					Base: expr,
-					Expr: Expression(IdentExpr{
-						Value: Token{
-							Buff:          []byte("_ptr"),
-							PrimaryType:   Identifier,
-							SecondaryType: SecondaryNullType,
-						},
-					}),
-				}),
+					Expr: IdentExpr{Value: Token{Buff: []byte("_ptr"), PrimaryType: Identifier}},
+				},
 			}
 		}
 		return TypeCast{
-			Type: Type(PointerType{BaseType: Typ.(DynamicType).BaseType}),
-			Expr: Expression(MemberExpr{
+			Type: PointerType{BaseType: Typ.(DynamicType).BaseType},
+			Expr: MemberExpr{
 				Base: expr,
-				Expr: Expression(IdentExpr{
-					Value: Token{
-						Buff:          []byte("_ptr"),
-						PrimaryType:   Identifier,
-						SecondaryType: SecondaryNullType,
-					},
-				}),
-			}),
+				Expr: IdentExpr{Value: Token{Buff: []byte("_ptr"), PrimaryType: Identifier}},
+			},
 		}
 	}
 	return expr
@@ -665,31 +620,11 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 		switch expr.(BasicLit).Value.PrimaryType {
 		case CharLiteral:
 		case NumberLiteral:
-			return BasicType{
-				Expr: IdentExpr{
-					Value: Token{
-						Buff:          []byte("i64"),
-						PrimaryType:   Identifier,
-						SecondaryType: SecondaryNullType,
-					},
-				},
-			}
+			return BasicType{Expr: IdentExpr{Value: Token{Buff: []byte("i64"), PrimaryType: Identifier}}}
 		case StringLiteral:
 			return ArrayType{
-				Size: Token{
-					PrimaryType:   NumberLiteral,
-					SecondaryType: DecimalRadix,
-					Buff:          []byte(strconv.Itoa(expr.(BasicLit).Value.Flags)),
-				},
-				BaseType: BasicType{
-					Expr: IdentExpr{
-						Value: Token{
-							Buff:          []byte("u8"),
-							PrimaryType:   Identifier,
-							SecondaryType: SecondaryNullType,
-						},
-					},
-				},
+				Size:     Token{Buff: []byte(strconv.Itoa(expr.(BasicLit).Value.Flags)), PrimaryType: NumberLiteral, SecondaryType: DecimalRadix},
+				BaseType: BasicType{Expr: IdentExpr{Value: Token{Buff: []byte("u8"), PrimaryType: Identifier}}},
 			}
 		}
 	case IdentExpr:
@@ -743,11 +678,7 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 	case HeapAlloc:
 		switch expr.(HeapAlloc).Type.(type) {
 		case ArrayType:
-			return DynamicType{
-				BaseType: ImplictArrayType{
-					BaseType: expr.(HeapAlloc).Type.(ArrayType).BaseType,
-				},
-			}
+			return DynamicType{BaseType: ImplictArrayType{BaseType: expr.(HeapAlloc).Type.(ArrayType).BaseType}}
 		default:
 			return DynamicType{BaseType: expr.(HeapAlloc).Type}
 		}
