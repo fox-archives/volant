@@ -38,8 +38,11 @@ func AnalyzeFile(ast File, pathh string) File {
 	return newAst
 }
 
-func (s *SemanticAnalyzer) getSymbol(Ident Token) *Node {
-	for i := 0; i <= s.CurrentScope; i++ {
+func (s *SemanticAnalyzer) getSymbol(Ident Token, Curr bool) *Node {
+	if Curr {
+		return s.Symbols.Find(Ident, s.CurrentScope)
+	}
+	for i := s.CurrentScope; i >= 0; i-- {
 		if symbol := s.Symbols.Find(Ident, i); symbol != nil {
 			return symbol
 		}
@@ -65,8 +68,16 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 	switch stmt.(type) {
 	case Typedef:
 		return s.typedef(stmt.(Typedef))
+	case Import:
+		return s.imprt(stmt.(Import))
 	case Declaration:
 		return s.declaration(stmt.(Declaration))
+	case IfElseBlock:
+		return s.ifElse(stmt.(IfElseBlock))
+	case Loop:
+		return s.loop(stmt.(Loop))
+	case Switch:
+		return s.swtch(stmt.(Switch))
 	case Block:
 		return s.block(stmt.(Block))
 	case Assignment:
@@ -79,23 +90,64 @@ func (s *SemanticAnalyzer) statement(stmt Statement) Statement {
 		return ExportStatement{Stmt: s.statement(stmt.(ExportStatement).Stmt)}
 	case Expression:
 		return s.expr(stmt.(Expression))
-	case Import:
-		return s.imprt(stmt.(Import))
 	}
 
 	return stmt
 }
 
-func (s *SemanticAnalyzer) imprt(stmt Import) Import {
+func (s *SemanticAnalyzer) ifElse(ifElse IfElseBlock) IfElseBlock {
+	if ifElse.HasInitStmt {
+		ifElse.InitStatement = s.statement(ifElse.InitStatement)
+	}
+	ifElse.Conditions = s.exprArray(ifElse.Conditions)
 
+	for x, block := range ifElse.Blocks {
+		ifElse.Blocks[x] = s.block(block)
+	}
+	ifElse.ElseBlock = s.block(ifElse.ElseBlock)
+
+	return ifElse
+}
+
+func (s *SemanticAnalyzer) loop(loop Loop) Loop {
+	if loop.Type&InitLoop == InitLoop {
+		loop.InitStatement = s.statement(loop.InitStatement)
+	}
+	if loop.Type&CondLoop == CondLoop {
+		loop.Condition = s.expr(loop.Condition)
+	}
+	if loop.Type&LoopLoop == LoopLoop {
+		loop.LoopStatement = s.statement(loop.LoopStatement)
+	}
+	loop.Block = s.block(loop.Block)
+	return loop
+}
+
+func (s *SemanticAnalyzer) swtch(swtch Switch) Switch {
+	if swtch.Type == 1 {
+		swtch.InitStatement = s.statement(swtch.InitStatement)
+		swtch.Expr = s.expr(swtch.Expr)
+	}
+
+	for x, Case := range swtch.Cases {
+		swtch.Cases[x].Condition = s.expr(Case.Condition)
+		swtch.Cases[x].Block = s.block(Case.Block)
+	}
+
+	if swtch.HasDefaultCase {
+		swtch.DefaultCase = s.block(swtch.DefaultCase)
+	}
+	return swtch
+}
+
+func (s *SemanticAnalyzer) imprt(stmt Import) Import {
 	for i, Path := range stmt.Paths {
 		path1 := path.Clean(string(Path.Buff[1 : len(Path.Buff)-1]))
 
 		importer.ImportFile(s.NameSp.BasePath, path1, false, CompileFile, AnalyzeFile)
 
-		s.Imports[strings.Split(path.Base(path1), ".")[0]] = []byte(s.NameSp.getLastImportPrefix())
-
 		if path.Ext(path1) != ".h" {
+			s.Imports[strings.Split(path.Base(path1), ".")[0]] = []byte(s.NameSp.getLastImportPrefix())
 			path1 += ".h"
 		}
 		stmt.Paths[i].Buff = []byte(path1)
@@ -123,9 +175,14 @@ func (s *SemanticAnalyzer) typedef(typedef Typedef) Typedef {
 				strct.Props = append(strct.Props, prop)
 			}
 		}
-		Typ = s.strct(strct)
-		typedef.Type = Typ
+		strct.Name = typedef.Name
+		Typ2 := s.strctNoValue(strct)
+		typedef.Type = Typ2
+		s.addSymbol(typedef.Name, typedef)
+
+		Typ = s.strctValue(Typ2)
 		typedef.DefaultName = s.NameSp.getStrctDefaultName(typedef.Name)
+		return Typedef{DefaultName: typedef.DefaultName, Type: s.typ(Typ), Name: s.NameSp.getNewVarName(typedef.Name)}
 	case TupleType:
 		Typ = s.tupl(Typ.(TupleType))
 	case EnumType:
@@ -195,7 +252,7 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 	}
 
 	for i, Ident := range dec.Identifiers {
-		if s.getSymbol(Ident) != nil {
+		if s.getSymbol(Ident, true) != nil {
 			error.New(string(Ident.Buff)+" has already been declared.", Ident.Line, Ident.Column)
 		} else {
 			s.addSymbol(Ident, dec.Types[i])
@@ -210,7 +267,7 @@ func (s *SemanticAnalyzer) declaration(dec Declaration) Declaration {
 	return dec
 }
 
-func (s *SemanticAnalyzer) strctProp(prop Declaration) Declaration {
+func (s *SemanticAnalyzer) strctPropNoValue(prop Declaration) Declaration {
 	if len(prop.Types) == 1 {
 		Type := prop.Types[0]
 		for i := 1; i < len(prop.Identifiers); i++ {
@@ -225,35 +282,37 @@ func (s *SemanticAnalyzer) strctProp(prop Declaration) Declaration {
 		}
 	}
 
-	for i, typ := range prop.Types {
-		prop.Types[i] = s.typ(typ)
-	}
-
 	if len(prop.Values) > 0 && len(prop.Types) != len(prop.Values) {
 		error.New("Invalid number of types or values specified", prop.Identifiers[0].Line, prop.Identifiers[0].Column)
 	}
 
-	for i, Val := range prop.Values {
-		prop.Values[i] = s.expr(Val)
-	}
-
-	for i, Ident := range prop.Identifiers {
-		if s.Symbols.Find(Ident, s.CurrentScope) != nil {
+	for _, Ident := range prop.Identifiers {
+		if s.getSymbol(Ident, true) != nil {
 			error.New(string(Ident.Buff)+" has already been decplared.", Ident.Line, Ident.Column)
-		} else {
-			s.addSymbol(Ident, prop.Types[i])
 		}
 	}
 
 	return prop
 }
 
-func (s *SemanticAnalyzer) strct(strct StructType) StructType {
+func (s *SemanticAnalyzer) strctNoValue(strct StructType) StructType {
 	s.pushScope()
 	for i, prop := range strct.Props {
-		strct.Props[i] = s.strctProp(prop)
+		strct.Props[i] = s.strctPropNoValue(prop)
 	}
 	s.popScope()
+	return strct
+}
+
+func (s *SemanticAnalyzer) strctValue(strct StructType) StructType {
+	for x, prop := range strct.Props {
+		for y, val := range prop.Values {
+			strct.Props[x].Values[y] = s.expr(val)
+		}
+		for y, typ := range prop.Types {
+			strct.Props[x].Types[y] = s.typ(typ)
+		}
+	}
 	return strct
 }
 
@@ -288,7 +347,12 @@ func (s *SemanticAnalyzer) expr(expr Expression) Expression {
 	case CompoundLiteral:
 		expr2 = s.compoundLiteral(expr.(CompoundLiteral))
 	case FuncExpr:
+		s.pushScope()
+		for i, arg := range expr.(FuncExpr).Type.ArgNames {
+			s.addSymbol(arg, expr.(FuncExpr).Type.ArgTypes[i])
+		}
 		expr2 = FuncExpr{Block: s.block(expr.(FuncExpr).Block), Type: s.typ(expr.(FuncExpr).Type).(FuncType)}
+		s.popScope()
 	case HeapAlloc:
 		expr2 = HeapAlloc{Type: s.typ(expr.(HeapAlloc).Type)}
 	}
@@ -297,6 +361,7 @@ func (s *SemanticAnalyzer) expr(expr Expression) Expression {
 }
 
 func (s *SemanticAnalyzer) typ(typ Type) Type {
+
 	switch typ.(type) {
 	case BasicType:
 		return BasicType{Expr: s.expr(typ.(BasicType).Expr)}
@@ -311,14 +376,32 @@ func (s *SemanticAnalyzer) typ(typ Type) Type {
 	case ArrayType:
 		return ArrayType{Size: typ.(ArrayType).Size, BaseType: s.typ(typ.(ArrayType).BaseType)}
 	case FuncType:
-		return FuncType{Type: typ.(FuncType).Type, ArgTypes: s.typeArray(typ.(FuncType).ArgTypes), ArgNames: typ.(FuncType).ArgNames, ReturnTypes: s.typeArray(typ.(FuncType).ReturnTypes)}
+		ArgNames := typ.(FuncType).ArgNames
+		for i, name := range ArgNames {
+			ArgNames[i] = s.NameSp.getNewVarName(name)
+		}
+		return FuncType{Type: typ.(FuncType).Type, ArgTypes: s.typeArray(typ.(FuncType).ArgTypes), ArgNames: ArgNames, ReturnTypes: s.typeArray(typ.(FuncType).ReturnTypes)}
 	case StructType:
 		Typ := typ.(StructType)
-		for i, prop := range typ.(StructType).Props {
+
+		strct := StructType{}
+		strct.Name = Typ.Name
+		strct.Props = make([]Declaration, len(Typ.Props))
+		strct.SuperStructs = Typ.SuperStructs
+
+		for i, prop := range Typ.Props {
 			for j, ident := range prop.Identifiers {
-				Typ.Props[i].Identifiers[j] = s.NameSp.getNewVarName(ident)
+				switch prop.Types[j].(type) {
+				case FuncType:
+					strct.Props[i].Identifiers = append(strct.Props[i].Identifiers, s.NameSp.getStrctMethodName(Typ.Name, ident))
+				default:
+					strct.Props[i].Identifiers = append(strct.Props[i].Identifiers, s.NameSp.getNewVarName(ident))
+				}
 			}
+			strct.Props[i].Types = prop.Types
+			strct.Props[i].Values = prop.Values
 		}
+		return strct
 	}
 
 	return typ
@@ -334,40 +417,41 @@ func (s *SemanticAnalyzer) typeArray(types []Type) []Type {
 
 func (s *SemanticAnalyzer) typeCast(expr TypeCast) TypeCast {
 	return TypeCast{Type: s.typ(expr.Type), Expr: s.expr(expr.Expr)}
+	/*
+		switch expr.Type.(type) {
+		case BasicType:
+			break
+		default:
+			return TypeCast{Type: s.typ(expr.Type), Expr: s.expr(expr.Expr)}
+		}
 
-	switch expr.Type.(type) {
-	case BasicType:
-		break
-	default:
-		return TypeCast{Type: s.typ(expr.Type), Expr: s.expr(expr.Expr)}
-	}
+		Typ := s.getType(expr.Type.(BasicType).Expr)
 
-	Typ := s.getType(expr.Type.(BasicType).Expr)
+		switch Typ.(type) {
+		case StructType:
+			break
+		default:
+			return TypeCast{Type: s.typ(expr.Type), Expr: s.expr(expr.Expr)}
+		}
 
-	switch Typ.(type) {
-	case StructType:
-		break
-	default:
-		return TypeCast{Type: s.typ(expr.Type), Expr: s.expr(expr.Expr)}
-	}
-
-	return TypeCast{
-		Type: expr.Type,
-		Expr: UnaryExpr{
-			Op: Token{Buff: []byte("*"), PrimaryType: AirthmaticOperator, SecondaryType: Mul},
-			Expr: TypeCast{
-				Type: PointerType{BaseType: expr.Type},
-				Expr: BinaryExpr{
-					Left: UnaryExpr{Op: Token{Buff: []byte("&"), PrimaryType: BitwiseOperator, SecondaryType: And}, Expr: s.expr(expr)},
-					Op:   Token{Buff: []byte("+"), PrimaryType: AirthmaticOperator, SecondaryType: Add},
-					Right: CallExpr{
-						Function: IdentExpr{Value: Token{Buff: []byte("offsetof"), PrimaryType: Identifier}},
-						Args:     []Expression{expr.Type.(BasicType).Expr, Typ.(StructType).Props[0].Types[0]},
+		return TypeCast{
+			Type: expr.Type,
+			Expr: UnaryExpr{
+				Op: Token{Buff: []byte("*"), PrimaryType: AirthmaticOperator, SecondaryType: Mul},
+				Expr: TypeCast{
+					Type: PointerType{BaseType: expr.Type},
+					Expr: BinaryExpr{
+						Left: UnaryExpr{Op: Token{Buff: []byte("&"), PrimaryType: BitwiseOperator, SecondaryType: And}, Expr: s.expr(expr)},
+						Op:   Token{Buff: []byte("+"), PrimaryType: AirthmaticOperator, SecondaryType: Add},
+						Right: CallExpr{
+							Function: IdentExpr{Value: Token{Buff: []byte("offsetof"), PrimaryType: Identifier}},
+							Args:     []Expression{expr.Type.(BasicType).Expr, Typ.(StructType).Props[0].Types[0]},
+						},
 					},
 				},
 			},
-		},
-	}
+		}
+	*/
 }
 
 func (s *SemanticAnalyzer) compoundLiteral(expr CompoundLiteral) CompoundLiteral {
@@ -544,17 +628,17 @@ func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
 		case MemberExpr:
 			return MemberExpr{
 				Base: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(MemberExpr).Base.(IdentExpr).Value)},
-				Expr: expr.Expr.(MemberExpr).Expr,
+				Expr: s.expr(expr.Expr.(MemberExpr).Expr),
 			}
 		case CallExpr:
 			return CallExpr{
 				Function: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(CallExpr).Function.(IdentExpr).Value)},
-				Args:     expr.Expr.(CallExpr).Args,
+				Args:     s.exprArray(expr.Expr.(CallExpr).Args),
 			}
 		case ArrayMemberExpr:
 			return ArrayMemberExpr{
 				Parent: IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(ArrayMemberExpr).Parent.(IdentExpr).Value)},
-				Index:  expr.Expr.(ArrayMemberExpr).Index,
+				Index:  s.expr(expr.Expr.(ArrayMemberExpr).Index),
 			}
 		case IdentExpr:
 			return IdentExpr{Value: s.NameSp.joinName(val, expr.Expr.(IdentExpr).Value)}
@@ -565,19 +649,70 @@ func (s *SemanticAnalyzer) memberExpr(expr MemberExpr) Expression {
 
 	switch Typ.(type) {
 	case Typedef:
-		break
+		switch Typ.(Typedef).Type.(type) {
+		case EnumType:
+			return IdentExpr{Value: s.NameSp.getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
+		}
 	default:
-		return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
-	}
+		isPointer := false
 
-	switch Typ.(Typedef).Type.(type) {
-	case EnumType:
-		break
-	default:
-		return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
-	}
+		switch Typ.(type) {
+		case PointerType:
+			Typ = Typ.(PointerType).BaseType
+			isPointer = true
+		}
 
-	return IdentExpr{Value: s.NameSp.getEnumProp(expr.Base.(IdentExpr).Value.Buff, expr.Expr.(IdentExpr).Value)}
+		Typ = s.getType(Typ.(BasicType).Expr)
+
+		switch Typ.(type) {
+		case Typedef:
+			Typ = Typ.(Typedef).Type
+		default:
+			return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
+		}
+		switch Typ.(type) {
+		case StructType:
+			break
+		default:
+			return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
+		}
+
+		typ := Typ.(StructType)
+		s.pushScope()
+		defer s.popScope()
+
+		for _, prop := range typ.Props {
+			for x, ident := range prop.Identifiers {
+				s.addSymbol(s.NameSp.getActualName(ident), prop.Types[x])
+			}
+		}
+
+		switch expr.Expr.(type) {
+		case CallExpr:
+			return CallExpr{Function: IdentExpr{Value: s.NameSp.getStrctMethodName(Typ.(StructType).Name, expr.Expr.(CallExpr).Function.(IdentExpr).Value)}, Args: append([]Expression{s.expr(expr.Base)}, s.exprArray(expr.Expr.(CallExpr).Args)...)}
+		case IdentExpr:
+			ident := expr.Expr.(IdentExpr).Value
+
+			for _, prop := range Typ.(StructType).Props {
+				for x, Type := range prop.Types {
+					switch Type.(type) {
+					case FuncType:
+						break
+					default:
+						continue
+					}
+					if bytes.Compare(s.NameSp.getActualName(prop.Identifiers[x]).Buff, s.NameSp.getActualName(ident).Buff) != 0 {
+						continue
+					}
+					return IdentExpr{Value: s.NameSp.getStrctMethodName(Typ.(StructType).Name, ident)}
+				}
+			}
+		}
+		if isPointer {
+			return PointerMemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
+		}
+	}
+	return MemberExpr{Base: s.expr(expr.Base), Expr: s.expr(expr.Expr)}
 }
 
 func (s *SemanticAnalyzer) exprArray(array []Expression) []Expression {
@@ -597,18 +732,12 @@ func (s *SemanticAnalyzer) decayToPointer(expr Expression) Expression {
 		case ImplictArrayType:
 			return TypeCast{
 				Type: PointerType{BaseType: Typ.(DynamicType).BaseType.(ImplictArrayType).BaseType},
-				Expr: MemberExpr{
-					Base: expr,
-					Expr: IdentExpr{Value: Token{Buff: []byte("_ptr"), PrimaryType: Identifier}},
-				},
+				Expr: MemberExpr{Base: expr, Expr: IdentExpr{Value: Token{Buff: []byte("_ptr"), PrimaryType: Identifier}}},
 			}
 		}
 		return TypeCast{
 			Type: PointerType{BaseType: Typ.(DynamicType).BaseType},
-			Expr: MemberExpr{
-				Base: expr,
-				Expr: IdentExpr{Value: Token{Buff: []byte("_ptr"), PrimaryType: Identifier}},
-			},
+			Expr: MemberExpr{Base: expr, Expr: IdentExpr{Value: Token{Buff: []byte("_ptr"), PrimaryType: Identifier}}},
 		}
 	}
 	return expr
@@ -629,11 +758,12 @@ func (s *SemanticAnalyzer) getType(expr Expression) Type {
 		}
 	case IdentExpr:
 		Ident := expr.(IdentExpr).Value
+
 		var symbol *Node
 		if Ident.Flags != 0 {
-			symbol = s.getSymbol(s.NameSp.getActualName(Ident))
+			symbol = s.getSymbol(s.NameSp.getActualName(Ident), false)
 		} else {
-			symbol = s.getSymbol(Ident)
+			symbol = s.getSymbol(Ident, false)
 		}
 		if symbol != nil {
 			return symbol.Type

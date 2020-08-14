@@ -26,9 +26,10 @@ func (n *Namespace) getEnumProp(enumName []byte, prop Token) Token {
 }
 
 func (n *Namespace) getNewVarName(token Token) Token {
-	if token.Flags == 1 || token.Flags == 2 {
+	if token.Flags != 0 {
 		return token
 	}
+	// print(string(token.Buff), "\t", len(token.Buff) > 19 && bytes.Compare(token.Buff[:19], []byte("__UNSAFE_INTERNAL__")) == 0, "\n")
 	if len(token.Buff) > 19 && bytes.Compare(token.Buff[:19], []byte("__UNSAFE_INTERNAL__")) == 0 {
 		return Token{Buff: token.Buff[19:], PrimaryType: Identifier, SecondaryType: SecondaryNullType, Line: token.Line, Column: token.Column, Flags: 2}
 	}
@@ -40,13 +41,14 @@ func (n *Namespace) getLastImportPrefix() string {
 }
 
 func (n *Namespace) getActualName(token Token) Token {
+	if token.Flags == 0 {
+		return token
+	}
 	switch token.Flags {
-	case 1:
-	case 3:
-	case 4:
-		token.Buff = token.Buff[1+len(n.Base):]
 	case 2:
 		token.Buff = append([]byte("__UNSAFE_INTERNAL__"), token.Buff...)
+	default:
+		token.Buff = token.Buff[1+len(n.Base):]
 	}
 	token.Flags = 0
 	return token
@@ -55,6 +57,12 @@ func (n *Namespace) getActualName(token Token) Token {
 func (n *Namespace) getStrctDefaultName(strct Token) Token {
 	strct.Buff = []byte("d" + n.Base + string(strct.Buff))
 	strct.Flags = 4
+	return strct
+}
+
+func (n *Namespace) getStrctMethodName(name Token, strct Token) Token {
+	strct.Buff = []byte("m" + n.Base + string(name.Buff) + "_" + string(strct.Buff))
+	strct.Flags = 5
 	return strct
 }
 

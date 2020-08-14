@@ -210,7 +210,7 @@ func (parser *Parser) parseTypeArray() []Type {
 
 func (parser *Parser) parseFunctionType() FuncType {
 	function := FuncType{}
-	function.Type = FunctionType(0)
+	function.Type = OrdFunction
 
 	// check for async/work keyword
 	if token := parser.ReadToken(); token.PrimaryType == AsyncKeyword {
@@ -219,8 +219,6 @@ func (parser *Parser) parseFunctionType() FuncType {
 	} else if token.PrimaryType == WorkKeyword {
 		function.Type = WorkFunction
 		parser.eatLastToken()
-	} else {
-		function.Type = OrdFunction
 	}
 
 	// parse arguments
@@ -240,7 +238,7 @@ func (parser *Parser) parseFunctionType() FuncType {
 
 		parser.expect(RightParen, SecondaryNullType)
 		parser.eatLastToken()
-	} else if token.PrimaryType != Comma && token.PrimaryType != SemiColon && token.SecondaryType != Equal && token.PrimaryType != RightParen {
+	} else if token.PrimaryType != Comma && token.PrimaryType != SemiColon && token.SecondaryType != Equal && token.PrimaryType != RightParen && token.PrimaryType == LeftCurlyBrace {
 		function.ReturnTypes = []Type{parser.parseType()}
 	} else {
 		function.ReturnTypes = []Type{VoidType}
@@ -857,7 +855,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 			Typ := parser.parseType()
 			parser.expect(RightParen, SecondaryNullType)
 			parser.eatLastToken()
-			return TypeCast{Type: Typ, Expr: parser.parseExpr(9)}
+			return TypeCast{Type: Typ, Expr: parser.parseExpr(8)}
 		} else if token.PrimaryType == LenKeyword {
 			parser.eatLastToken()
 			parser.expect(LeftParen, SecondaryNullType)
@@ -982,7 +980,7 @@ func (parser *Parser) parseExpr(state int) Expression {
 
 func (parser *Parser) parseFunctionExpr() FuncExpr {
 	function := FuncExpr{}
-	function.Type.Type = FunctionType(0)
+	function.Type.Type = OrdFunction
 
 	// check for async/work/inline keyword
 	if token := parser.ReadToken(); token.PrimaryType == AsyncKeyword {
@@ -991,8 +989,6 @@ func (parser *Parser) parseFunctionExpr() FuncExpr {
 	} else if token.PrimaryType == WorkKeyword {
 		function.Type.Type = WorkFunction
 		parser.eatLastToken()
-	} else {
-		function.Type.Type = OrdFunction
 	}
 
 	// parse arguments
@@ -1034,6 +1030,8 @@ func (parser *Parser) parseFunctionExpr() FuncExpr {
 		parser.eatLastToken()
 	} else if token.PrimaryType != LeftCurlyBrace {
 		function.Type.ReturnTypes = []Type{parser.parseType()}
+	} else {
+		function.Type.ReturnTypes = []Type{VoidType}
 	}
 
 	// parse code block

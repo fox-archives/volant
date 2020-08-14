@@ -38,6 +38,15 @@ func (t *SymbolTable) Find(Ident Token, Scope int) *Node {
 	return node
 }
 
+func (t *SymbolTable) Update(Ident Token, scope int, Typ Type) bool {
+	node := t.Find(Ident, scope)
+	if node != nil {
+		node.Type = Typ
+		return true
+	}
+	return false
+}
+
 func (t *SymbolTable) Delete(Ident Token, Scope int) {
 	last := t.First
 	node := last.Next

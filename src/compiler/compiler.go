@@ -179,6 +179,12 @@ func (c *Compiler) typedef(typedef Typedef) {
 	case StructType:
 		c.newline()
 		c.strctDefault(typedef)
+		c.strctMethods(typedef.Type.(StructType))
+		c.newline()
+	case EnumType:
+		c.newline()
+	case UnionType:
+		c.newline()
 	}
 }
 
@@ -265,7 +271,6 @@ func (c *Compiler) globalDeclaration(dec Declaration, isExported bool) {
 			}
 		}
 		c.semicolon()
-		c.newline()
 	}
 }
 
@@ -288,7 +293,6 @@ func (c *Compiler) declaration(dec Declaration) {
 			}
 		}
 		c.semicolon()
-		c.newline()
 	}
 }
 
@@ -404,6 +408,10 @@ func (c *Compiler) expression(expr Expression) {
 		c.colon()
 		c.space()
 		c.expression(expr.(TernaryExpr).Right)
+	case PointerMemberExpr:
+		c.expression(expr.(PointerMemberExpr).Base)
+		c.append([]byte("->"))
+		c.expression(expr.(PointerMemberExpr).Expr)
 	case CompoundLiteral:
 		c.openParen()
 		c.expression(expr.(CompoundLiteral).Name)
@@ -665,7 +673,6 @@ func (c *Compiler) Type(Typ Type) {
 }
 
 func (c *Compiler) ifElse(ifElse IfElseBlock) {
-
 	if ifElse.HasInitStmt {
 		c.indent()
 		c.openCurlyBrace()
@@ -694,7 +701,6 @@ func (c *Compiler) ifElse(ifElse IfElseBlock) {
 }
 
 func (c *Compiler) assignment(as Assignment) {
-
 	for i, Var := range as.Variables {
 		c.indent()
 		c.expression(Var)
@@ -707,9 +713,7 @@ func (c *Compiler) assignment(as Assignment) {
 		} else {
 			c.expression(as.Values[0])
 		}
-
 		c.semicolon()
-		c.newline()
 	}
 }
 
@@ -775,15 +779,12 @@ func (c *Compiler) swtch(swtch Switch) {
 
 func (c *Compiler) strctPropDeclaration(dec Declaration) {
 	for i, Var := range dec.Identifiers {
-		c.indent()
-
 		switch dec.Types[i].(type) {
 		case FuncType:
-			break
-		default:
-			c.declarationType(dec.Types[i], Var)
+			continue
 		}
-
+		c.indent()
+		c.declarationType(dec.Types[i], Var)
 		c.semicolon()
 		c.newline()
 	}
@@ -796,12 +797,7 @@ func (c *Compiler) strct(typ StructType) {
 	c.newline()
 	for _, prop := range typ.Props {
 		c.strctPropDeclaration(prop)
-	} /*
-		for _, superStructType := range typ.SuperStructTypes {
-			for _, prop := range superStructType.Props {
-				c.strctPropDeclaration(prop)
-			}
-		}*/
+	}
 	c.popScope()
 	c.indent()
 	c.closeCurlyBrace()
@@ -827,10 +823,8 @@ func (c *Compiler) strctDefault(strct Typedef) {
 		}
 
 		for x, Ident := range prop.Identifiers {
-			Val := prop.Values[x]
-
-			switch Val.(type) {
-			case FuncExpr:
+			switch prop.Types[x].(type) {
+			case FuncType:
 				break
 			default:
 				c.dot()
@@ -847,6 +841,23 @@ func (c *Compiler) strctDefault(strct Typedef) {
 	c.closeCurlyBrace()
 	c.semicolon()
 	c.newline()
+	c.newline()
+}
+
+func (c *Compiler) strctMethods(strct StructType) {
+	for _, prop := range strct.Props {
+		for i, val := range prop.Values {
+			switch prop.Types[i].(type) {
+			case FuncType:
+				break
+			default:
+				continue
+			}
+			c.declarationType(prop.Types[i], prop.Identifiers[i])
+			c.block(val.(FuncExpr).Block)
+			c.newline()
+		}
+	}
 }
 
 func (c *Compiler) enum(en EnumType) {

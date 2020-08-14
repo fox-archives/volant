@@ -30,7 +30,6 @@ func ImportFile(dir string, base string, isMain bool, CompileFile func(File) []b
 	if err != nil && !isMain {
 		Code, err = ioutil.ReadFile(Path.Join(libPath, base))
 	}
-
 	if err != nil {
 		error.NewGenError("error finding import: " + err.Error())
 	}
@@ -43,5 +42,9 @@ func ImportFile(dir string, base string, isMain bool, CompileFile func(File) []b
 		f.Write(defaultC)
 	}
 
-	f.Write(CompileFile(AnalyzeFile(ParseFile(&Lexer{Buffer: append(append(defaultVo, []byte("\n")...), Code...), Line: 1}), path)))
+	if Path.Ext(path) == ".h" {
+		f.Write(Code)
+	} else {
+		f.Write(CompileFile(AnalyzeFile(ParseFile(&Lexer{Buffer: append(append(defaultVo, []byte("\n")...), Code...), Line: -14}), path)))
+	}
 }

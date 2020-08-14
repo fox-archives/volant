@@ -194,6 +194,11 @@ type (
 		Expr Expression
 	}
 
+	PointerMemberExpr struct {
+		Base Expression
+		Expr Expression
+	}
+
 	ArrayMemberExpr struct {
 		Parent Expression
 		Index  Expression
@@ -237,9 +242,9 @@ type (
 	}
 
 	StructType struct {
-		Props            []Declaration
-		SuperStructs     []Expression
-		SuperStructTypes []Type
+		Name         Token
+		Props        []Declaration
+		SuperStructs []Expression
 	}
 
 	TupleType struct {
@@ -314,6 +319,7 @@ func (HeapAlloc) isExpression()           {}
 func (ArrayLiteral) isExpression()        {}
 func (LenExpr) isExpression()             {}
 func (SizeExpr) isExpression()            {}
+func (PointerMemberExpr) isExpression()   {}
 
 func (BasicLit) isStatement()            {}
 func (BinaryExpr) isStatement()          {}
@@ -332,6 +338,7 @@ func (HeapAlloc) isStatement()           {}
 func (ArrayLiteral) isStatement()        {}
 func (LenExpr) isStatement()             {}
 func (SizeExpr) isStatement()            {}
+func (PointerMemberExpr) isStatement()   {}
 
 func (BasicType) isType()        {}
 func (StructType) isType()       {}
