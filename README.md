@@ -2,6 +2,10 @@
 
 $TEAM's language for the Replit Programming Language Jam
 
+## Archived
+
+See latest development at [volantlang/volant](https://github.com/volantlang/volant)
+
 ## Information
 
 - Starts on August 10th and runs until August 31st
